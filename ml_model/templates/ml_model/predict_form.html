@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ETB (CMB) Prediction</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="jumbotron text-center bg-primary text-white">
+            <h1 class="display-4">ETB (CMB) Prediction</h1>
+            <p class="lead">Fill in the details below to get your prediction.</p>
+        </div>
+
+        <form method="POST" action="{% url 'predict' %}" class="mt-4">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="week">Week (Number):</label>
+                <input type="number" class="form-control" id="week" name="week" value="{{ week }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="vessel">Vessel (Text):</label>
+                <input type="text" class="form-control" id="vessel" name="vessel" value="{{ vessel }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="voyage">Voyage (Text):</label>
+                <input type="text" class="form-control" id="voyage" name="voyage" value="{{ voyage }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="etb_cgp">ETB (CGP) (Date):</label>
+                <input type="date" class="form-control" id="etb_cgp" name="etb_cgp" value="{{ etb_cgp }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="etd_cgp">ETD (CGP) (Date):</label>
+                <input type="date" class="form-control" id="etd_cgp" name="etd_cgp" value="{{ etd_cgp }}" required>
+            </div>
+
+            <button type="submit" class="btn btn-success btn-block">Predict</button>
+        </form>
+
+        {% if etb_cmb %}
+            <div class="alert alert-info mt-4 text-center">
+                <h2>Predicted ETB (CMB): {{ etb_cmb }}</h2>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

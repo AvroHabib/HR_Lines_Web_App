@@ -1,0 +1,7 @@
+{% for sample in samples %}
+    <tr>
+        {% for value in sample.values %}
+            <td>{{ value }}</td>
+        {% endfor %}
+    </tr>
+{% endfor %}
