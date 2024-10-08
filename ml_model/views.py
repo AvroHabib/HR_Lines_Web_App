@@ -17,6 +17,8 @@ from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 
+from .models import Vessel ,Schedule
+
 
 # Load the model (assumes it's saved in the same directory)
 model = joblib.load('ml_model/model.pkl')
@@ -151,12 +153,67 @@ def cce_table(request):
         vessel_names = data.get('vessel_names', [])
         samples = generate_samples(df, vessel_names)
         print(samples)
+
+        
+
+        for sample in samples:
+            week_etb_cgp = sample['Wk/ ETB CGP']
+            service = sample['Service']
+            vessel = sample['Vessel']
+            voyage_s = sample['Voyage-S']
+            eta_cgp = datetime.strptime(sample['ETA CGP'], '%a-%d/%m')
+            etb_cgp = datetime.strptime(sample['ETB CGP'], '%a-%d/%m')
+            etd_cgp = datetime.strptime(sample['ETD CGP'], '%a-%d/%m')
+            voyage_n = sample['Voyage-N']
+            eta_cmb = datetime.strptime(sample['ETA CMB'], '%a-%d/%m')
+            etb_cmb = datetime.strptime(sample['ETB CMB'], '%a-%d/%m')
+            etd_cmb = datetime.strptime(sample['ETD CMB'], '%a-%d/%m')
+            eta_cgp_2 = datetime.strptime(sample['ETA CGP-2'], '%a-%d/%m')
+            etb_cgp_2 = datetime.strptime(sample['ETB CGP-2'], '%a-%d/%m')
+            etd_cgp_2 = datetime.strptime(sample['ETD CGP-2'], '%a-%d/%m')
+
+            new_schedule = Schedule(
+                week_etb_cgp=week_etb_cgp,
+                service=service,
+                vessel=vessel,
+                voyage_s=voyage_s,
+                eta_cgp=eta_cgp,
+                etb_cgp=etb_cgp,
+                etd_cgp=etd_cgp,
+                voyage_n=voyage_n,
+                eta_cmb=eta_cmb,
+                etb_cmb=etb_cmb,
+                etd_cmb=etd_cmb,
+                eta_cgp_2=eta_cgp_2,
+                etb_cgp_2=etb_cgp_2,
+                etd_cgp_2=etd_cgp_2
+            )
+            new_schedule.save()
+
+
+     
         
         # Return data as JSON for frontend to handle
         return JsonResponse({'samples': samples}, safe=False)
     
     # If GET request, just render the template without any data
     return render(request, 'ml_model/cce_table.html')
+
+
+def add_vessel(request):
+    if request.method == 'POST':
+        # Get data from the POST request
+        name = request.POST.get('name')
+        code = request.POST.get('code')
+
+        # Create a new Vessel object and save it to the database
+        new_vessel = Vessel(name=name, code=code)
+        new_vessel.save()
+
+        # Return a response or render a template after saving
+        return render(request, 'ml_model/add_vessel.html', {'vessel': new_vessel})
+
+    return render(request, 'ml_model/add_vessel.html')
 
 
 
