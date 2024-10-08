@@ -123,34 +123,24 @@ def predict_etb(request):
 
 
 
-# def cce_table(request):
-#     #print the values sent from the form
-#     if request.method == 'POST':
-#         df = load_data()
-#         df = remove_duplicate_vessels(df)
-#         data_json = request.POST.get('vessel_names')
-#         vessel_names = json.loads(data_json)
-#         samples = generate_samples(df,vessel_names) 
-#         print(f'vessel_names : {samples}')
-#         return render(request, 'ml_model/cce_table.html', {'samples': samples})
 
-        
-        
-    
-#     return render(request, 'ml_model/cce_table.html')
 
 
 def cce_table(request):
     if request.method == 'POST':
         df = load_data()
         df = remove_duplicate_vessels(df)
-        data_json = request.POST.get('vessel_names')
-        vessel_names = json.loads(data_json)
-        samples = generate_samples(df, vessel_names)
-        print(f'vessel_names : {samples}')
         
-        return render(request, 'ml_model/cce_table.html', {'samples': samples})
+        data = json.loads(request.body)
+        print(data)
+        vessel_names = data.get('vessel_names', [])
+        samples = generate_samples(df, vessel_names)
+        print(samples)
+        
+        # Return data as JSON for frontend to handle
+        return JsonResponse({'samples': samples}, safe=False)
     
+    # If GET request, just render the template without any data
     return render(request, 'ml_model/cce_table.html')
 
 
