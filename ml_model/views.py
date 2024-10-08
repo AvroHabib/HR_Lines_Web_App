@@ -15,7 +15,7 @@ from .utils.data_process import *
 
 from django.http import JsonResponse
 from django.template.loader import render_to_string
-
+from django.views.decorators.csrf import csrf_exempt
 
 
 # Load the model (assumes it's saved in the same directory)
@@ -140,17 +140,22 @@ def predict_etb(request):
 #     return render(request, 'ml_model/cce_table.html')
 
 
+
 def cce_table(request):
     if request.method == 'POST':
         df = load_data()
         df = remove_duplicate_vessels(df)
-        data_json = request.POST.get('vessel_names')
-        vessel_names = json.loads(data_json)
-        samples = generate_samples(df, vessel_names)
-        print(f'vessel_names : {samples}')
         
-        return render(request, 'ml_model/cce_table.html', {'samples': samples})
+        data = json.loads(request.body)
+        print(data)
+        vessel_names = data.get('vessel_names', [])
+        samples = generate_samples(df, vessel_names)
+        print(samples)
+        
+        # Return data as JSON for frontend to handle
+        return JsonResponse({'samples': samples}, safe=False)
     
+    # If GET request, just render the template without any data
     return render(request, 'ml_model/cce_table.html')
 
 

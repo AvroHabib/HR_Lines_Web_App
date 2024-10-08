@@ -4,6 +4,8 @@ import pandas as pd
 
 from .data_loader import load_data
 
+pd.options.mode.chained_assignment = None  # default='warn'
+
 
 
 
@@ -138,7 +140,7 @@ def generate_samples(df,available_vessels):
 
     for vessel in available_vessels :
         last_info = get_last_info(df = df, vessel_name = vessel)
-        print('last_info:',last_info)
+        
         
         new_record = {  'Wk/ ETB CGP' : int(last_info['Wk/ ETB CGP']) + 1,
                         'Service': last_info['Service'],
