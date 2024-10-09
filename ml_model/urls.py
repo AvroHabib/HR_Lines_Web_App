@@ -6,7 +6,8 @@ from . import views
 urlpatterns = [
 
     path('', views.home, name='home'),
-    path('add-vessel/', add_vessel, name='add_vessel'),
+    path('search/', views.search, name='search'),
+    path('add-vessel/', views.add_vessel, name='add_vessel'),
     path('cce_table/', views.cce_table, name='cce_table'),
     path('predict/', views.predict_etb, name='predict'),
 ]

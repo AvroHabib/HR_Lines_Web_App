@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="search-container">
+        <form id = 'search_form'>
+            <input type="text" placeholder="Search..." name="query">
+            <button type="submit">Search</button>
+        </form>
+    </div>
+
+    
+    <ul id="results">
+        
+    </ul>
+    
+
+    <script>
+        document.querySelector('input[name="query"]').addEventListener('input', function(event) {
+            const data = event.target.value;
+            
+            fetch(/search/, {
+            method: 'POST',
+            body: JSON.stringify(data),
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = '';
+
+                data.filtered_words.forEach(word => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = word;
+                    resultsDiv.appendChild(listItem);
+                });
+            })
+            .catch(error => console.error('Error:', error));
+        });
+
+
+        // Re-attach event listeners after updating the results
+        const observer = new MutationObserver(() => {
+            document.querySelectorAll('#results li').forEach(item => {
+            item.addEventListener('click', event => {
+                console.log('Item clicked:', event.target.textContent);
+                fetch('/item-clicked/', {
+                    method: 'POST',
+                    body: JSON.stringify({ clicked_item: event.target.textContent }),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Item click response:', data);
+                })
+                .catch(error => console.error('Error:', error));
+            });
+            });
+        });
+
+        observer.observe(document.getElementById('results'), { childList: true });
+    </script>
+
+
+
+</body>
+</html>

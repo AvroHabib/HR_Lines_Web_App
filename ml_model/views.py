@@ -18,6 +18,9 @@ from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import Vessel ,Schedule
+import random
+import string
+
 
 
 # Load the model (assumes it's saved in the same directory)
@@ -215,6 +218,38 @@ def add_vessel(request):
 
     return render(request, 'ml_model/add_vessel.html')
 
+
+def search(request):
+
+
+    # Generate a list of random words from a to z
+    
+
+    
+    if request.method == 'POST':
+
+        random_words = ['dune', 'matrix', 'inception', 'avatar', 'titanic', 'gladiator', 'godfather', 'rocky', 'jaws']
+       
+       
+
+        query = json.loads(request.body)
+
+        # Filter out empty queries or queries that consist only of spaces
+        if not query.strip():
+            return JsonResponse({'filtered_words': []})
+        
+        print(f'query:{query}')
+            # Filter random words that start with the query
+        filtered_words = [word for word in random_words if word.startswith(query)]
+        print(filtered_words)
+        return JsonResponse({'filtered_words': filtered_words})
+        
+
+    return render(request, 'ml_model/search.html')
+    
+
+
+    
 
 
 
