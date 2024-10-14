@@ -155,7 +155,7 @@ def cce_table(request):
         print(data)
         vessel_names = data.get('vessel_names', [])
         samples = generate_samples(df, vessel_names)
-        print(samples)
+        
 
         
 
@@ -175,23 +175,37 @@ def cce_table(request):
             etb_cgp_2 = datetime.strptime(sample['ETB CGP-2'], '%a-%d/%m')
             etd_cgp_2 = datetime.strptime(sample['ETD CGP-2'], '%a-%d/%m')
 
-            new_schedule = Schedule(
-                week_etb_cgp=week_etb_cgp,
-                service=service,
-                vessel=vessel,
-                voyage_s=voyage_s,
-                eta_cgp=eta_cgp,
-                etb_cgp=etb_cgp,
-                etd_cgp=etd_cgp,
-                voyage_n=voyage_n,
-                eta_cmb=eta_cmb,
-                etb_cmb=etb_cmb,
-                etd_cmb=etd_cmb,
-                eta_cgp_2=eta_cgp_2,
-                etb_cgp_2=etb_cgp_2,
-                etd_cgp_2=etd_cgp_2
-            )
-            new_schedule.save()
+            # new_schedule = Schedule(
+            #     week_etb_cgp=week_etb_cgp,
+            #     service=service,
+            #     vessel=vessel,
+            #     voyage_s=voyage_s,
+            #     eta_cgp=eta_cgp,
+            #     etb_cgp=etb_cgp,
+            #     etd_cgp=etd_cgp,
+            #     voyage_n=voyage_n,
+            #     eta_cmb=eta_cmb,
+            #     etb_cmb=etb_cmb,
+            #     etd_cmb=etd_cmb,
+            #     eta_cgp_2=eta_cgp_2,
+            #     etb_cgp_2=etb_cgp_2,
+            #     etd_cgp_2=etd_cgp_2
+            # )
+            # new_schedule.save()
+        
+
+
+        # # Retrieve all Schedule objects from the database
+        # all_schedules = Schedule.objects.all()
+
+        # # Convert the queryset to a list of dictionaries
+        # schedules_list = list(all_schedules.values())
+
+        # # Print the schedules for debugging
+        # print(schedules_list)
+
+        
+
 
 
      
