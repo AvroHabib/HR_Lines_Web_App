@@ -8,12 +8,7 @@ class Vessel(models.Model):
     def __str__(self):
         return self.name
     
-class Vessel(models.Model):
-    name = models.CharField(max_length=100)
-    code = models.CharField(max_length=20)
 
-    def __str__(self):
-        return self.name
 
 
 class Schedule(models.Model):

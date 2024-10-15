@@ -9,6 +9,7 @@ django.setup()
 
 
 from .data_loader import load_data
+from .data_process import * 
 from ..models import Schedule
 
 
@@ -18,6 +19,9 @@ from ..models import Schedule
 
 def import_to_database():
     df = load_data()
+    print('Before removing duplicates:', df['Vessel'].unique())
+    df = remove_duplicate_vessels(df)
+    print('After removing duplicates:', df['Vessel'].unique())
     for _, row in df.iterrows():
         x = row.to_dict()
         Schedule.objects.create(
