@@ -1,8 +1,13 @@
-from datetime import timedelta
+from datetime import datetime, date
 
 import pandas as pd
 
+from ml_model.models import Schedule
+
 from .data_loader import load_data
+from datetime import timedelta
+
+from ml_model.models import Predicted_Schedule
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -37,7 +42,7 @@ def get_last_info(df, vessel_name) :
 
 def format_timestamp(timestamp):
     # Ensure the input is a pandas Timestamp
-    if not isinstance(timestamp, pd.Timestamp):
+    if not isinstance(timestamp, (date,datetime)):
         raise ValueError("Input must be a pandas Timestamp")
     
     # Format the timestamp
@@ -52,7 +57,7 @@ def get_voyage_s(last_info):
     
 
 
-    previous_voyage = last_info['Voyage-S']
+    previous_voyage = last_info.voyage_s
 
     integer_part_str = ''.join([char for char in previous_voyage if char.isdigit()])
     integer_part_int = int(integer_part_str)
@@ -68,7 +73,7 @@ def get_voyage_n(last_info):
     
 
 
-    previous_voyage = last_info['Voyage-N']
+    previous_voyage = last_info.voyage_n
 
     integer_part_str = ''.join([char for char in previous_voyage if char.isdigit()])
     integer_part_int = int(integer_part_str)
@@ -83,7 +88,7 @@ def get_voyage_n(last_info):
 def get_eta_cmb(last_info):
 
     n = 5 # use probabilistic/ml model later
-    last_date = last_info['ETD CGP-2']
+    last_date = last_info.etd_cgp_2
     return last_date + timedelta(days=n)
 
 
@@ -134,21 +139,22 @@ def get_etd_cgp(last_info):
 
 
 
-def generate_samples(df,available_vessels):
+def generate_samples(available_vessels):
         
-    samples = []
+    # samples = []
 
     for vessel in available_vessels :
-        last_info = get_last_info(df = df, vessel_name = vessel)
+        last_info = Schedule.objects.filter(vessel=vessel).order_by('-id').first()
         
         
-        new_record = {  'Wk/ ETB CGP' : int(last_info['Wk/ ETB CGP']) + 1,
-                        'Service': last_info['Service'],
-                        'Vessel' : last_info['Vessel'],
+        new_record = {  'ID' : last_info.id ,
+                        'Wk/ ETB CGP' : int(last_info.week_etb_cgp) + 1,
+                        'Service': last_info.service,
+                        'Vessel' : last_info.vessel,
                         'Voyage-S':	get_voyage_s(last_info),
-                        'ETA CGP':	format_timestamp(last_info['ETA CGP-2']),
-                        'ETB CGP':	format_timestamp(last_info['ETB CGP-2']),
-                        'ETD CGP':	format_timestamp(last_info['ETD CGP-2']),
+                        'ETA CGP':	format_timestamp(last_info.eta_cgp_2),
+                        'ETB CGP':	format_timestamp(last_info.etb_cgp_2),
+                        'ETD CGP':	format_timestamp(last_info.etd_cgp_2),
                         'Voyage-N':	get_voyage_n(last_info),
                         'ETA CMB' :	format_timestamp(get_eta_cmb(last_info)),
                         'ETB CMB' :	format_timestamp(get_etb_cmb(last_info)),
@@ -157,13 +163,42 @@ def generate_samples(df,available_vessels):
                         'ETB CGP-2' : format_timestamp(get_etb_cgp(last_info)),	
                         'ETD CGP-2': format_timestamp(get_etd_cgp(last_info))}
         
-        samples.append(new_record)
+        # samples.append(new_record)
+
+        # Check if a duplicate entry exists in the database
+        duplicate_entry = Predicted_Schedule.objects.filter(
+            week_etb_cgp=int(last_info.week_etb_cgp) + 1,
+            service=last_info.service,
+            vessel=last_info.vessel,
+            voyage_s=get_voyage_s(last_info),
+            
+        ).exists()
+
+        if not duplicate_entry:
+            Predicted_Schedule.objects.create(
+            week_etb_cgp=int(last_info.week_etb_cgp) + 1,
+            service=last_info.service,
+            vessel=last_info.vessel,
+            voyage_s=get_voyage_s(last_info),
+            eta_cgp=last_info.eta_cgp_2,
+            etb_cgp=last_info.etb_cgp_2,
+            etd_cgp=last_info.etd_cgp_2,
+            voyage_n=get_voyage_n(last_info),
+            eta_cmb=get_eta_cmb(last_info),
+            etb_cmb=get_etb_cmb(last_info),
+            etd_cmb=get_etd_cmb(last_info),
+            eta_cgp_2=get_eta_cgp(last_info),
+            etb_cgp_2=get_etb_cgp(last_info),
+            etd_cgp_2=get_etd_cgp(last_info)
+            )
+
+
         
 
 
     
     
-    return samples
+    # return samples
 
 
 # def main() :

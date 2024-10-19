@@ -1,5 +1,5 @@
 import json
-from django.shortcuts import render
+from django.shortcuts import redirect, render,get_object_or_404
 
 # Create your views here.
 
@@ -20,6 +20,15 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import Vessel ,Schedule
 import random
 import string
+
+from .models import Predicted_Schedule
+
+from .forms import PredictedScheduleForm, ScheduleForm
+
+from .models import Item
+from .forms import ItemForm
+from django.core.mail import send_mail
+from django.conf import settings
 
 
 
@@ -148,67 +157,12 @@ def predict_etb(request):
 
 def cce_table(request):
     if request.method == 'POST':
-        df = load_data()
-        df = remove_duplicate_vessels(df)
-        
         data = json.loads(request.body)
         print(data)
         vessel_names = data.get('vessel_names', [])
-        samples = generate_samples(df, vessel_names)
-        
+        generate_samples(vessel_names)
 
-        
-
-        for sample in samples:
-            week_etb_cgp = sample['Wk/ ETB CGP']
-            service = sample['Service']
-            vessel = sample['Vessel']
-            voyage_s = sample['Voyage-S']
-            eta_cgp = datetime.strptime(sample['ETA CGP'], '%a-%d/%m')
-            etb_cgp = datetime.strptime(sample['ETB CGP'], '%a-%d/%m')
-            etd_cgp = datetime.strptime(sample['ETD CGP'], '%a-%d/%m')
-            voyage_n = sample['Voyage-N']
-            eta_cmb = datetime.strptime(sample['ETA CMB'], '%a-%d/%m')
-            etb_cmb = datetime.strptime(sample['ETB CMB'], '%a-%d/%m')
-            etd_cmb = datetime.strptime(sample['ETD CMB'], '%a-%d/%m')
-            eta_cgp_2 = datetime.strptime(sample['ETA CGP-2'], '%a-%d/%m')
-            etb_cgp_2 = datetime.strptime(sample['ETB CGP-2'], '%a-%d/%m')
-            etd_cgp_2 = datetime.strptime(sample['ETD CGP-2'], '%a-%d/%m')
-
-            # new_schedule = Schedule(
-            #     week_etb_cgp=week_etb_cgp,
-            #     service=service,
-            #     vessel=vessel,
-            #     voyage_s=voyage_s,
-            #     eta_cgp=eta_cgp,
-            #     etb_cgp=etb_cgp,
-            #     etd_cgp=etd_cgp,
-            #     voyage_n=voyage_n,
-            #     eta_cmb=eta_cmb,
-            #     etb_cmb=etb_cmb,
-            #     etd_cmb=etd_cmb,
-            #     eta_cgp_2=eta_cgp_2,
-            #     etb_cgp_2=etb_cgp_2,
-            #     etd_cgp_2=etd_cgp_2
-            # )
-            # new_schedule.save()
-        
-
-
-        # # Retrieve all Schedule objects from the database
-        # all_schedules = Schedule.objects.all()
-
-        # # Convert the queryset to a list of dictionaries
-        # schedules_list = list(all_schedules.values())
-
-        # # Print the schedules for debugging
-        # print(schedules_list)
-
-        
-
-
-
-     
+        samples = list(Predicted_Schedule.objects.filter(vessel__in=vessel_names).values())
         
         # Return data as JSON for frontend to handle
         return JsonResponse({'samples': samples}, safe=False)
@@ -260,9 +214,64 @@ def search(request):
         
 
     return render(request, 'ml_model/search.html')
+
+
+
+
+
+def edit_record(request, pk):
+    record = get_object_or_404(Predicted_Schedule, pk=pk)
+    print(record)
+    
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        print('data :', data)
+        form = PredictedScheduleForm(data, instance=record)
+        if form.is_valid():
+            form.save()
+            print('working')
+            return JsonResponse({'success': True})
+        else:
+            print('Form errors:', form.errors)
+            return JsonResponse({'success': False, 'error': 'Invalid form data', 'errors': form.errors})
+    
+    print('not working')
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+def delete_record(request, pk):
+    record = get_object_or_404(Predicted_Schedule, pk=pk)
+    if request.method == 'POST':
+        record.delete()
+        return JsonResponse({'success': True})
+    return JsonResponse({'success': False, 'error': 'Delete failed'})
+
     
 
+def item_list(request):
+    items = Item.objects.all()
+    return render(request, 'ml_model/item_list.html', {'items': items})
 
+def update_item(request, pk):
+    item = get_object_or_404(Item, pk=pk)
+    print('Item :', item)
+    if request.method == 'POST':
+        print('POST :', request.POST)
+        form = ItemForm(request.POST, instance=item)
+
+        if form.is_valid():
+            print('working')
+            form.save()
+            return JsonResponse({'success': True})
+    print('not working')
+    return JsonResponse({'success': False, 'error': 'Invalid form data'})
+
+def delete_item(request, pk):
+    item = get_object_or_404(Item, pk=pk)
+    if request.method == 'POST':
+        item.delete()
+        return JsonResponse({'success': True})
+    return JsonResponse({'success': False, 'error': 'Delete failed'})
     
 
 
