@@ -31,6 +31,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 import plotly.express as px
 import plotly.io as pio
+from .models import Analytics
 
 
 
@@ -293,7 +294,49 @@ def line_chart_view(request):
     
     # Pass the graph HTML to the template
     return render(request, 'ml_model/line_chart.html', {'graph_html': graph_html})
+
+
+
+def histogram_view(request):
+    # Retrieve data from the Analytics model
+    analytics_data = Analytics.objects.all().values()
     
+    # Convert the QuerySet to a DataFrame
+    df = pd.DataFrame(analytics_data)
+    
+    # Check if the DataFrame is not empty and has the required column
+    if not df.empty and 'diff_cgp_cmb' in df.columns:
+        # Create a count plot for the numeric column
+        fig = px.histogram(df, x='diff_cgp_cmb', title='Count Plot', labels={'diff_cgp_cmb': 'Days Taken to Arrive at CMB from CGP', 'count': 'Days'})
+        
+        # Convert the figure to HTML
+        graph_html = pio.to_html(fig, full_html=False)
+        
+        # Pass the graph HTML to the template
+        return render(request, 'ml_model/histogram.html', {'graph_html': graph_html})
+    else:
+        return HttpResponse('No data available or column not found')
+
+
+def pie_chart_view(request):
+    # Retrieve data from the Analytics model
+    analytics_data = Analytics.objects.all().values()
+    
+    # Convert the QuerySet to a DataFrame
+    df = pd.DataFrame(analytics_data)
+    
+    # Check if the DataFrame is not empty and has the required column
+    if not df.empty and 'diff_cgp_cmb' in df.columns:
+        # Create a pie chart for the numeric column
+        fig = px.pie(df, names='diff_cgp_cmb', title='Pie Chart of Days Taken to Arrive at CMB from CGP')
+        
+        # Convert the figure to HTML
+        graph_html = pio.to_html(fig, full_html=False)
+        
+        # Pass the graph HTML to the template
+        return render(request, 'ml_model/piechart.html', {'graph_html': graph_html})
+    else:
+        return HttpResponse('No data available or column not found')
 
 
 

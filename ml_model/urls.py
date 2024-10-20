@@ -17,6 +17,8 @@ urlpatterns = [
     path('update_item/<int:pk>/', views.update_item, name='update_item'),
     path('delete_item/<int:pk>/', views.delete_item, name='delete_item'),
     path('line-chart/', views.line_chart_view, name='line_chart'),
+    path('histogram/', views.histogram_view, name='histogram_view'),
+    path('piechart/', views.pie_chart_view, name='pie_chart_view'),
 ]
 
 
