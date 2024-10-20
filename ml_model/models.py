@@ -65,6 +65,35 @@ class Predicted_Schedule(models.Model):
 
 
 
+class Analytics(models.Model):
+    week_etb_cgp = models.CharField(max_length=10)
+    service = models.CharField(max_length=10)
+    vessel = models.CharField(max_length=100)
+    voyage_s = models.CharField(max_length=10)
+    eta_cgp = models.DateField()
+    etb_cgp = models.DateField()
+    diff_eta_etb_cgp = models.IntegerField(blank=True, null=True)
+    etd_cgp = models.DateField()
+    diff_etb_etd_cgp = models.IntegerField(blank=True, null=True)
+    voyage_n = models.CharField(max_length=10)
+    eta_cmb = models.DateField()
+    diff_cgp_cmb = models.IntegerField(blank=True, null=True)
+    etb_cmb = models.DateField()
+    diff_eta_etb_cmb = models.IntegerField(blank=True, null=True)
+    etd_cmb = models.DateField()
+    diff_etb_etd_cmb = models.IntegerField(blank=True, null=True)
+    eta_cgp_2 = models.DateField()
+    etb_cgp_2 = models.DateField()
+    etd_cgp_2 = models.DateField()
+
+    class Meta:
+        managed = False
+        db_table = 'analytics'
+    def __str__(self):
+        return f"{self.service} - {self.vessel} - {self.voyage_s}"
+
+
+
 class Item(models.Model):
     name = models.CharField(max_length=100)
     quantity = models.IntegerField()
