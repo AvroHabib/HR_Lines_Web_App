@@ -29,6 +29,8 @@ from .models import Item
 from .forms import ItemForm
 from django.core.mail import send_mail
 from django.conf import settings
+import plotly.express as px
+import plotly.io as pio
 
 
 
@@ -272,6 +274,25 @@ def delete_item(request, pk):
         item.delete()
         return JsonResponse({'success': True})
     return JsonResponse({'success': False, 'error': 'Delete failed'})
+
+
+
+
+def line_chart_view(request):
+    # Sample data
+    data = {
+        'x': ['A', 'B', 'C', 'D'],
+        'y': [10, 15, 7, 20]
+    }
+    
+    # Create a Plotly figure
+    fig = px.line(x=data['x'], y=data['y'], title='Sample Line Chart', labels={'x':'Categories', 'y':'Values'})
+    
+    # Convert the figure to HTML
+    graph_html = pio.to_html(fig, full_html=False)
+    
+    # Pass the graph HTML to the template
+    return render(request, 'ml_model/line_chart.html', {'graph_html': graph_html})
     
 
 
