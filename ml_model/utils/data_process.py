@@ -1,15 +1,39 @@
+import os
+import sys
+
+import django
+
+
+PROJECT_ROOT = r"C:\django\hr_lines"
+
+# Add the Django project directory to sys.path
+sys.path.append(PROJECT_ROOT)
+
+# Set up Django settings
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hr_lines.settings')
+django.setup()
+
+
 from datetime import datetime, date
+from math import e
 
 import pandas as pd
+from requests import get
 
-from ml_model.models import Schedule
+from ml_model.models import *
 
-from .data_loader import load_data
+# from .data_loader import load_data
 from datetime import timedelta
+from dateutil.relativedelta import relativedelta
+from django.db.models.functions import Lower, Replace
+from django.db.models import Value, F
 
-from ml_model.models import Predicted_Schedule
+from django.apps import apps
+
+
 
 pd.options.mode.chained_assignment = None  # default='warn'
+
 
 
 
@@ -193,25 +217,452 @@ def generate_samples(available_vessels):
             )
 
 
+def month_dif(y, x):
+    dif = relativedelta(y, x)
+    # Calculate the total difference in months
+    total_months = dif.years * 12 + dif.months
+    # Add 1 if there are any remaining days
+    if dif.days > 0:
+        total_months += 1
+    return total_months
+
+
+def get_weeks(date):
+    iso_calender = date.isocalendar()
+    return iso_calender[1]
+
+
+
+
+def generate_schedule(service,months):
+
+    print(type(months))
+
+    if service == 'BES':
+        bes_rv = BES_RV.objects.all().first()
+
+        available_vessels = list(Vessel.objects.filter(service='BES').values_list('name', flat=True).distinct())
+
+        for vessel in available_vessels:
+
+            keep_going = BES.objects.exists()
+
+            initial_info = None
+
+            if BES.objects.exists():
+                initial_info = (
+                                BES.objects
+                                .annotate(vessel_no_space=Lower(Replace('vessel', Value(' '), Value(''))))
+                                .filter(vessel_no_space=vessel.replace(" ", "").lower())
+                                .order_by('-id')
+                                .first()
+                            )
+
+                
+            
+            else:
+                print('No data available')
+            
+            while keep_going:
+
+                last_info = (
+                                BES.objects
+                                .annotate(vessel_no_space=Lower(Replace('vessel', Value(' '), Value(''))))
+                                .filter(vessel_no_space=vessel.replace(" ", "").lower())
+                                .order_by('-id')
+                                .first()
+                            )
+                
+                
+                duplicate_entry = BES.objects.filter(
+                week_etb_cgp=get_weeks(last_info.eta_cgp_2) ,
+                service=last_info.service,
+                vessel=last_info.vessel,
+                voyage_s=get_voyage_s(last_info),
+            
+                ).exists()
+
+                if month_dif(last_info.eta_cgp,initial_info.eta_cgp) <months and not duplicate_entry:
+
+                    print(f'date1:{last_info.eta_cgp} - date2:{initial_info.eta_cgp} - dif:{month_dif(last_info.eta_cgp,initial_info.eta_cgp)}')
+
+                    
+
+                    BES.objects.create(
+                    week_etb_cgp=get_weeks(last_info.eta_cgp_2),
+                    service=last_info.service,
+                    vessel=last_info.vessel,
+                    voyage_s=get_voyage_s(last_info),
+                    eta_cgp=last_info.eta_cgp_2,
+                    etb_cgp=last_info.etb_cgp_2,
+                    etd_cgp=last_info.etd_cgp_2,
+                    voyage_n=get_voyage_n(last_info),
+
+                    eta_sin=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin),
+                    etb_sin=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin),
+                    etd_sin=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin),
+
+                    eta_pkg=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin + bes_rv.sin_to_pkg),
+                    etb_pkg=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin + bes_rv.sin_to_pkg + bes_rv.eta_to_etb_pkg),
+                    etd_pkg=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin + bes_rv.sin_to_pkg + bes_rv.eta_to_etb_pkg + bes_rv.etb_to_etd_pkg),
+                    
+                    eta_cgp_2=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin + bes_rv.sin_to_pkg + bes_rv.eta_to_etb_pkg + bes_rv.etb_to_etd_pkg + bes_rv.pkg_to_cgp),
+                    etb_cgp_2=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin + bes_rv.sin_to_pkg + bes_rv.eta_to_etb_pkg + bes_rv.etb_to_etd_pkg + bes_rv.pkg_to_cgp + bes_rv.eta_to_etb_cgp),
+                    etd_cgp_2=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin + bes_rv.sin_to_pkg + bes_rv.eta_to_etb_pkg + bes_rv.etb_to_etd_pkg + bes_rv.pkg_to_cgp + bes_rv.eta_to_etb_cgp + bes_rv.etb_to_etd_cgp)
+                    )
+                else:
+                    keep_going = False
+    else:
         
+        cce_rv = CCE_RV.objects.all().first()
+
+        available_vessels = list(Vessel.objects.filter(service='CCE').values_list('name', flat=True).distinct())
+
+        for vessel in available_vessels:
+
+            keep_going = Schedule.objects.exists()
+
+            initial_info = None
+
+            if Schedule.objects.exists():
+                initial_info = (
+                                Schedule.objects
+                                .annotate(vessel_no_space=Lower(Replace('vessel', Value(' '), Value(''))))
+                                .filter(vessel_no_space=vessel.replace(" ", "").lower())
+                                .order_by('-id')
+                                .first()
+                            )
+
+                
+            
+            else:
+                print('No data available')
+            
+            while keep_going:
+
+                last_info = (
+                                Schedule.objects
+                                .annotate(vessel_no_space=Lower(Replace('vessel', Value(' '), Value(''))))
+                                .filter(vessel_no_space=vessel.replace(" ", "").lower())
+                                .order_by('-id')
+                                .first()
+                            )
+                print(vessel)
+                print(last_info)
+                
+                duplicate_entry = Schedule.objects.filter(
+                week_etb_cgp=get_weeks(last_info.eta_cgp_2) ,
+                service=last_info.service,
+                vessel=last_info.vessel,
+                voyage_s=get_voyage_s(last_info),
+            
+                ).exists()
+                print(initial_info.eta_cgp)
+
+                if month_dif(last_info.eta_cgp,initial_info.eta_cgp) < months and not duplicate_entry:
+
+                    print("debug")
+                    Schedule.objects.create(
+                    week_etb_cgp=get_weeks(last_info.eta_cgp_2),
+                    service=last_info.service,
+                    vessel=last_info.vessel,
+                    voyage_s=get_voyage_s(last_info),
+                    eta_cgp=last_info.eta_cgp_2,
+                    etb_cgp=last_info.etb_cgp_2,
+                    etd_cgp=last_info.etd_cgp_2,
+                    voyage_n=get_voyage_n(last_info),
+                    eta_cmb=last_info.etd_cgp_2 +timedelta(days=cce_rv.cgp_to_cmb),
+                    etb_cmb=last_info.etd_cgp_2 +timedelta(days=cce_rv.cgp_to_cmb+ cce_rv.eta_to_etb_cmb),
+                    etd_cmb=last_info.etd_cgp_2 +timedelta(days=cce_rv.cgp_to_cmb + cce_rv.eta_to_etb_cmb + cce_rv.etb_to_etd_cmb),
+
+                    eta_cgp_2=last_info.etd_cgp_2 +timedelta(days=cce_rv.cgp_to_cmb + cce_rv.eta_to_etb_cmb + cce_rv.etb_to_etd_cmb + cce_rv.cmb_to_cgp),
+                    etb_cgp_2=last_info.etd_cgp_2 +timedelta(days=cce_rv.cgp_to_cmb + cce_rv.eta_to_etb_cmb + cce_rv.etb_to_etd_cmb + cce_rv.cmb_to_cgp + cce_rv.eta_to_etb_cgp),
+                    etd_cgp_2=last_info.etd_cgp_2 +timedelta(days=cce_rv.cgp_to_cmb + cce_rv.eta_to_etb_cmb + cce_rv.etb_to_etd_cmb + cce_rv.cmb_to_cgp + cce_rv.eta_to_etb_cgp + cce_rv.etb_to_etd_cgp)                   
+                    )
+                else:
+                    keep_going = False
+
+
+                 
+
+            
+
+
+
+def set_voyage_complete_before(model_name, month, year):
+    # Define the cutoff date as the first day of the specified month and year
+    cutoff_date = date(year, month, 1)
+    
+    # Get the model class based on the model name
+    model = apps.get_model('ml_model', model_name)
+    
+    # Filter records where the etd_cgp date is before the cutoff date
+    records_to_update = model.objects.filter(eta_cgp__lt=cutoff_date)
+    
+    # Update the voyage_complete field to True for the filtered records
+    records_to_update.update(voyage_complete=True)
+
+# Example usage
+
+def bes_to_cce(entry):
+    cce_rv = CCE_RV.objects.all().first()
+    if entry :
+        Schedule.objects.create(
+            week_etb_cgp=entry.week_etb_cgp,
+            service='CCE',
+            vessel=entry.vessel,
+            voyage_s=get_voyage_s(entry),
+            eta_cgp=entry.eta_cgp,
+            etb_cgp=entry.etb_cgp,
+            etd_cgp=entry.etd_cgp,
+            voyage_n=get_voyage_n(entry),
+            eta_cmb=entry.etd_cgp + timedelta(days=cce_rv.cgp_to_cmb),
+            etb_cmb=entry.etd_cgp + timedelta(days=cce_rv.cgp_to_cmb + cce_rv.eta_to_etb_cmb),
+            etd_cmb=entry.etd_cgp + timedelta(days=cce_rv.cgp_to_cmb + cce_rv.eta_to_etb_cmb + cce_rv.etb_to_etd_cmb),
+            eta_cgp_2=entry.etd_cgp + timedelta(days=cce_rv.cgp_to_cmb + cce_rv.eta_to_etb_cmb + cce_rv.etb_to_etd_cmb + cce_rv.cmb_to_cgp),
+            etb_cgp_2=entry.etd_cgp + timedelta(days=cce_rv.cgp_to_cmb + cce_rv.eta_to_etb_cmb + cce_rv.etb_to_etd_cmb + cce_rv.cmb_to_cgp + cce_rv.eta_to_etb_cgp),
+            etd_cgp_2=entry.etd_cgp + timedelta(days=cce_rv.cgp_to_cmb + cce_rv.eta_to_etb_cmb + cce_rv.etb_to_etd_cmb + cce_rv.cmb_to_cgp + cce_rv.eta_to_etb_cgp + cce_rv.etb_to_etd_cgp)
+        )
+
+    else:
+        print('No data available')
+
+
+def del_bes_by_vessel_name(entry):
+    vessel_name = entry.name
+    BES.objects.annotate(
+                            vessel_no_space=Lower(Replace(F('vessel'), Value(' '), Value('')))
+                        ).filter(
+                            vessel_no_space=vessel_name.replace(" ", "").lower(),
+                            voyage_complete=False
+                        ).delete()
+
+
+def del_cce_by_vessel_name(entry):
+    vessel_name = entry.name
+    Schedule.objects.annotate(
+                            vessel_no_space=Lower(Replace(F('vessel'), Value(' '), Value('')))
+                        ).filter(
+                            vessel_no_space=vessel_name.replace(" ", "").lower(),
+                            voyage_complete=False
+                        ).delete()
+
+
+def del_bes(entry):
+    vessel_name = entry.vessel
+    BES.objects.annotate(
+                            vessel_no_space=Lower(Replace(F('vessel'), Value(' '), Value('')))
+                        ).filter(
+                            vessel_no_space=vessel_name.replace(" ", "").lower(),
+                            voyage_complete=False
+                        ).delete()
+
+def del_cce(entry):
+
+
+    vessel_name = entry.vessel
+    Schedule.objects.annotate(
+                            vessel_no_space=Lower(Replace(F('vessel'), Value(' '), Value('')))
+                        ).filter(
+                            vessel_no_space=vessel_name.replace(" ", "").lower(),
+                            voyage_complete=False
+                        ).delete()
+
+
+def generate_bes_partial(entry):
+
+    bes_rv = BES_RV.objects.all().first()
+
+    vessel = entry.vessel
+    print('inside generate_bes_partial')
+    last_info = BES.objects.order_by('-eta_cgp').first()
+    initial_info = (
+                                BES.objects
+                                .annotate(vessel_no_space=Lower(Replace('vessel', Value(' '), Value(''))))
+                                .filter(vessel_no_space=vessel.replace(" ", "").lower())
+                                .order_by('-id')
+                                .first()
+                    )
+
+    months = month_dif(last_info.eta_cgp,initial_info.eta_cgp)
+    print('months:',months)
+
+    keep_going = True
+
+    while keep_going:
+
+                last_info = (
+                                BES.objects
+                                .annotate(vessel_no_space=Lower(Replace('vessel', Value(' '), Value(''))))
+                                .filter(vessel_no_space=vessel.replace(" ", "").lower())
+                                .order_by('-id')
+                                .first()
+                            )
+                
+                print('im inside while loop')
+                duplicate_entry = BES.objects.filter(
+
+                    eta_sin=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin),
+                    etb_sin=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin),
+                    etd_sin=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin)
+
+               
+                
+
+            
+                ).exists()
+                print('after duplicate check')
+
+                if month_dif(last_info.eta_cgp,initial_info.eta_cgp) <months :
+
+                    print(f'date1:{last_info.eta_cgp} - date2:{initial_info.eta_cgp} - dif:{month_dif(last_info.eta_cgp,initial_info.eta_cgp)}')
+
+                    
+
+                    BES.objects.create(
+                    week_etb_cgp=get_weeks(last_info.eta_cgp_2),
+                    service=last_info.service,
+                    vessel=last_info.vessel,
+                    voyage_s=get_voyage_s(last_info),
+                    eta_cgp=last_info.eta_cgp_2,
+                    etb_cgp=last_info.etb_cgp_2,
+                    etd_cgp=last_info.etd_cgp_2,
+                    voyage_n=get_voyage_n(last_info),
+
+                    eta_sin=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin),
+                    etb_sin=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin),
+                    etd_sin=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin),
+
+                    eta_pkg=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin + bes_rv.sin_to_pkg),
+                    etb_pkg=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin + bes_rv.sin_to_pkg + bes_rv.eta_to_etb_pkg),
+                    etd_pkg=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin + bes_rv.sin_to_pkg + bes_rv.eta_to_etb_pkg + bes_rv.etb_to_etd_pkg),
+                    
+                    eta_cgp_2=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin + bes_rv.sin_to_pkg + bes_rv.eta_to_etb_pkg + bes_rv.etb_to_etd_pkg + bes_rv.pkg_to_cgp),
+                    etb_cgp_2=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin + bes_rv.sin_to_pkg + bes_rv.eta_to_etb_pkg + bes_rv.etb_to_etd_pkg + bes_rv.pkg_to_cgp + bes_rv.eta_to_etb_cgp),
+                    etd_cgp_2=last_info.etd_cgp_2 +timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin + bes_rv.sin_to_pkg + bes_rv.eta_to_etb_pkg + bes_rv.etb_to_etd_pkg + bes_rv.pkg_to_cgp + bes_rv.eta_to_etb_cgp + bes_rv.etb_to_etd_cgp)
+                    )
+                else:
+                    keep_going = False
+
+
+
+
+#Need Testing
+def generate_cce_partial(entry):
+        
+        cce_rv = CCE_RV.objects.all().first()
+    
+        vessel = entry.vessel
+    
+        last_info = Schedule.objects.order_by('-eta_cgp').first()
+        initial_info = (
+                                    Schedule.objects
+                                    .annotate(vessel_no_space=Lower(Replace('vessel', Value(' '), Value(''))))
+                                    .filter(vessel_no_space=vessel.replace(" ", "").lower())
+                                    .order_by('-id')
+                                    .first()
+                        )
+    
+        months = month_dif(last_info.eta_cgp,initial_info.eta_cgp)
+    
+        keep_going = True
+    
+        while keep_going:
+    
+                    last_info = (
+                                    Schedule.objects
+                                    .annotate(vessel_no_space=Lower(Replace('vessel', Value(' '), Value(''))))
+                                    .filter(vessel_no_space=vessel.replace(" ", "").lower())
+                                    .order_by('-id')
+                                    .first()
+                                )
+                    
+                    
+                    # duplicate_entry = Schedule.objects.filter(
+                    # week_etb_cgp=get_weeks(last_info.eta_cgp_2) ,
+                    # service=last_info.service,
+                    # vessel=last_info.vessel,
+                    # voyage_s=get_voyage_s(last_info),
+                
+                    # ).exists()
+    
+                    if month_dif(last_info.eta_cgp,initial_info.eta_cgp) <months :
+    
+                        print(f'date1:{last_info.eta_cgp} - date2:{initial_info.eta_cgp} - dif:{month_dif(last_info.eta_cgp,initial_info.eta_cgp)}')
+    
+                        
+    
+                        Schedule.objects.create(
+                        week_etb_cgp=get_weeks(last_info.eta_cgp_2),
+                        service=last_info.service,
+                        vessel=last_info.vessel,
+                        voyage_s=get_voyage_s(last_info),
+                        eta_cgp=last_info.eta_cgp_2,
+                        etb_cgp=last_info.etb_cgp_2,
+                        etd_cgp=last_info.etd_cgp_2,
+                        voyage_n=get_voyage_n(last_info),
+    
+                        eta_cmb=last_info.etd_cgp_2 +timedelta(days=cce_rv.cgp_to_cmb),
+                        etb_cmb=last_info.etd_cgp_2 +timedelta(days=cce_rv.cgp_to_cmb+ cce_rv.eta_to_etb_cmb),
+                        etd_cmb=last_info.etd_cgp_2 +timedelta(days=cce_rv.cgp_to_cmb + cce_rv.eta_to_etb_cmb + cce_rv.etb_to_etd_cmb),
+                        eta_cgp_2=last_info.etd_cgp_2 +timedelta(days=cce_rv.cgp_to_cmb + cce_rv.eta_to_etb_cmb + cce_rv.etb_to_etd_cmb + cce_rv.cmb_to_cgp),
+                        etb_cgp_2=last_info.etd_cgp_2 +timedelta(days=cce_rv.cgp_to_cmb + cce_rv.eta_to_etb_cmb + cce_rv.etb_to_etd_cmb + cce_rv.cmb_to_cgp + cce_rv.eta_to_etb_cgp),
+                        etd_cgp_2=last_info.etd_cgp_2 +timedelta(days=cce_rv.cgp_to_cmb + cce_rv.eta_to_etb_cmb + cce_rv.etb_to_etd_cmb + cce_rv.cmb_to_cgp + cce_rv.eta_to_etb_cgp + cce_rv.etb_to_etd_cgp)                   
+                        )
+                    else:
+                        keep_going = False
+
 
 
     
+
+
+
     
-    # return samples
-
-
-# def main() :
-#     df = load_data()
-#     df = remove_duplicate_vessels(df)
-#     available_vessels = ['HR SAHARE "MSAH"']
-#     samples = generate_samples(df,available_vessels)
-#     print(samples)
 
 
 
-# if __name__ == '__main__':
-#     main()
+
+
+def cce_to_bes(entry):
+    bes_rv = BES_RV.objects.all().first()
+    if entry:
+        BES.objects.create(
+            week_etb_cgp=entry.week_etb_cgp,
+            service='BES',
+            vessel=entry.vessel,
+            voyage_s=get_voyage_s(entry),
+            eta_cgp=entry.eta_cgp,
+            etb_cgp=entry.etb_cgp,
+            etd_cgp=entry.etd_cgp,
+            voyage_n=get_voyage_n(entry),
+            eta_sin=entry.etd_cgp + timedelta(days=bes_rv.cgp_to_sin),
+            etb_sin=entry.etd_cgp + timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin),
+            etd_sin=entry.etd_cgp + timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin),
+            eta_pkg=entry.etd_cgp + timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin + bes_rv.sin_to_pkg),
+            etb_pkg=entry.etd_cgp + timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin + bes_rv.sin_to_pkg + bes_rv.eta_to_etb_pkg),
+            etd_pkg=entry.etd_cgp + timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin + bes_rv.sin_to_pkg + bes_rv.eta_to_etb_pkg + bes_rv.etb_to_etd_pkg),
+            eta_cgp_2=entry.etd_cgp + timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin + bes_rv.sin_to_pkg + bes_rv.eta_to_etb_pkg + bes_rv.etb_to_etd_pkg + bes_rv.pkg_to_cgp),
+            etb_cgp_2=entry.etd_cgp + timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin + bes_rv.sin_to_pkg + bes_rv.eta_to_etb_pkg + bes_rv.etb_to_etd_pkg + bes_rv.pkg_to_cgp + bes_rv.eta_to_etb_cgp),
+            etd_cgp_2=entry.etd_cgp + timedelta(days=bes_rv.cgp_to_sin + bes_rv.eta_to_etb_sin + bes_rv.etb_to_etd_sin + bes_rv.sin_to_pkg + bes_rv.eta_to_etb_pkg + bes_rv.etb_to_etd_pkg + bes_rv.pkg_to_cgp + bes_rv.eta_to_etb_cgp + bes_rv.etb_to_etd_cgp)
+        )
+    else:
+        print('No data available')
+
+
+
+
+
+            
+
+
+
+
+
+if __name__ == '__main__':
+    
+    set_voyage_complete_before('Schedule', 9, 2025)  # Set voyage_complete to True for records in the Schedule model before June 2026           
+    print('success')
 
 
                                 

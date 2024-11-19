@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <!-- Filter Section -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <h5>Filter by Service</h5>
+                <form method="get" id="filterForm">
+                    {% for service in services %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="service" value="{{ service }}" id="service{{ forloop.counter }}" {% if service in selected_services %}checked{% endif %}>
+                            <label class="form-check-label" for="service{{ forloop.counter }}">
+                                {{ service }}
+                            </label>
+                        </div>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-primary mt-3">Apply Filters</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Card Section -->
+        <div class="row">
+            {% for card in page_obj %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <!-- {% if card.image %}
+                            <img src="{{ card.image.url }}" class="card-img-top" alt="{{ card.title }}">
+                        {% endif %} -->
+                        <div class="card-body">
+                            <h5 class="card-title">{{ card.vessel }}</h5>
+                            <p class="card-text">{{ card.service }}</p>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination controls -->
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% for service in selected_services %}&service={{ service }}{% endfor %}" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for service in selected_services %}&service={{ service }}{% endfor %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item"><a class="page-link" href="?page={{ num }}{% for service in selected_services %}&service={{ service }}{% endfor %}">{{ num }}</a></li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for service in selected_services %}&service={{ service }}{% endfor %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for service in selected_services %}&service={{ service }}{% endfor %}" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</body>
+</html>

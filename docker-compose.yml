@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: mydatabase
+      MYSQL_ROOT_PASSWORD: avro@1808008
+    ports:
+      - "3305:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  web:
+    build: .
+    
+    command: >
+      sh -c "until nc -z db 3306; do
+      echo 'Waiting for MySQL...'; sleep 5; done;
+      python manage.py migrate &&
+      python manage.py runserver 0.0.0.0:8000"
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+
+volumes:
+  mysql_data:

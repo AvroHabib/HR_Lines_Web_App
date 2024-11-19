@@ -1,6 +1,6 @@
 import pandas as pd
 
-def load_data(path = 'C:\\Users\\omeoo\\Downloads\\CCE Schedule_automate.xlsx'):
+def load_data(path = 'C:\\Users\\omeoo\\Downloads\\cce.xlsx'):
 
 
     print('Loading data...')

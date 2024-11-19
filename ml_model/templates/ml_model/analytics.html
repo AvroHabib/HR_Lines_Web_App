@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Charts</title>
+    <!-- Include Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Include Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        .half-screen {
+            width: 50% !important;
+            transition: width 0.3s ease;
+        }
+
+        .spinner {
+        display: none;
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .spinner-container {
+        position: relative;
+        height: 100px; /* Adjust height as needed */
+    }
+    </style>
+</head>
+<body>
+    <h1 class="text-center mt-5">Analytics</h1>
+    
+    <h2 id="vessel_name" class="text-center mt-3"></h2>
+    
+    <div class="container mt-5">
+            <div class="col-md-12">
+
+                <div class="form-group">
+
+                     <label for="vesselSelect">Choose a vessel:</label>
+
+                      <select class="form-control" id="vesselSelect" name="vessel">
+
+                           {% for vessel in vessels %}
+
+                                <option value="{{vessel}}">{{ vessel}}</option>
+
+                             {% endfor %}
+
+                          </select>
+
+                </div>
+
+            </div>
+
+    </div>
+
+              
+         
+    
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card h-100 resizable" id="pieCard">
+                    <div class="card-body">
+                        <h1 class="card-title text-center">Pie Chart</h1>
+                        <div id="pie_view" class="mb-5">
+                            {{ pie_chart|safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card h-100 resizable" id="histCard">
+                    <div class="card-body">
+                        <h1 class="card-title text-center">Histogram</h1>
+                        <div id="hist_view">
+                            {{ hist_chart|safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="spinner-container">
+            <div id="spinner" class="spinner-border text-primary" role="status" style="display: none;">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const vesselSelect = document.getElementById('vesselSelect');
+            const spinner = document.getElementById('spinner');
+
+            vesselSelect.addEventListener('change', function() {
+                const selectedVessel = this.value;
+                console.log(selectedVessel);
+
+                // Show spinner
+                spinner.style.display = 'block';
+
+                fetch('/analytics/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({ vessel: selectedVessel })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('vessel_name').innerText = data.selected_vessel;
+
+                    var img1 = document.createElement('img');
+                    img1.src = data.pie_chart;
+                    console.log(data.pie_chart);
+                    img1.alt = 'Image 1';
+                    img1.className = 'img-fluid';
+
+                    var img2 = document.createElement('img');
+                    img2.src = data.hist_chart;
+                    img2.alt = 'Image 2';
+                    img2.className = 'img-fluid';
+                    
+                    document.getElementById('pie_view').innerHTML = '';
+                    document.getElementById('hist_view').innerHTML = '';
+                    
+                    document.getElementById('pie_view').appendChild(img1);
+                    document.getElementById('hist_view').appendChild(img2);
+
+
+                    
+
+                    console.log('Success:', data);
+
+                    // Hide spinner
+                    spinner.style.display = 'none';
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+
+                    // Hide spinner
+                    spinner.style.display = 'none';
+                });
+            });
+        });
+    </script>
+    
+    <!-- Include Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    
+   
+</body>
+</html>

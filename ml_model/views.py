@@ -1,37 +1,43 @@
 import json
+import os
+from re import S
 from django.shortcuts import redirect, render,get_object_or_404
+from django.core.paginator import Paginator
 
 # Create your views here.
 
 # views.py
+from flask import request
 import pandas as pd
 import joblib
 from django.http import HttpResponse, JsonResponse
+from django.db.models import F
 from datetime import datetime, timedelta
 
-from .utils.data_loader import *
+from ml_model.utils.data_import import *
+from ml_model.utils.data_process import *
 
-from .utils.data_process import *
+
 
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
+from ml_model.utils.data_import import *
 
-from .models import Vessel ,Schedule
 import random
 import string
 
-from .models import Predicted_Schedule
+
 
 from .forms import PredictedScheduleForm, ScheduleForm
 
-from .models import Item
+
 from .forms import ItemForm
 from django.core.mail import send_mail
 from django.conf import settings
 import plotly.express as px
 import plotly.io as pio
-from .models import Analytics
+
 
 
 
@@ -82,6 +88,7 @@ def home(request):
 
 
 
+@csrf_exempt
 def predict_etb(request):
     if request.method == 'POST':
         # Get form inputs
@@ -106,13 +113,12 @@ def predict_etb(request):
             return render(request, 'ml_model/predict_form.html', {'error': 'Invalid input types'})
 
         # Create a DataFrame for the model prediction
-      
         input_data = pd.DataFrame({
-        'Wk/ ETB CGP': [week],
-        'Vessel': [vessel],
-        'Voyage': [voyage],
-        'Time(B>D)(CGP)': [day_difference]
-    })
+            'Wk/ ETB CGP': [week],
+            'Vessel': [vessel],
+            'Voyage': [voyage],
+            'Time(B>D)(CGP)': [day_difference]
+        })
 
         # Make the prediction (this assumes the model is already loaded)
         model_output = model.predict(input_data)
@@ -133,7 +139,7 @@ def predict_etb(request):
             'voyage': voyage,
             'etb_cgp': etb_cgp,
             'etd_cgp': etd_cgp,
-            })
+        })
 
     # If no POST request, render the empty form
     return render(request, 'ml_model/predict_form.html')
@@ -158,6 +164,7 @@ def predict_etb(request):
 
 
 
+@csrf_exempt
 def cce_table(request):
     if request.method == 'POST':
         data = json.loads(request.body)
@@ -174,20 +181,7 @@ def cce_table(request):
     return render(request, 'ml_model/cce_table.html')
 
 
-def add_vessel(request):
-    if request.method == 'POST':
-        # Get data from the POST request
-        name = request.POST.get('name')
-        code = request.POST.get('code')
 
-        # Create a new Vessel object and save it to the database
-        new_vessel = Vessel(name=name, code=code)
-        new_vessel.save()
-
-        # Return a response or render a template after saving
-        return render(request, 'ml_model/add_vessel.html', {'vessel': new_vessel})
-
-    return render(request, 'ml_model/add_vessel.html')
 
 
 def search(request):
@@ -337,6 +331,331 @@ def pie_chart_view(request):
         return render(request, 'ml_model/piechart.html', {'graph_html': graph_html})
     else:
         return HttpResponse('No data available or column not found')
+
+
+# @csrf_exempt
+# def combined_view(request):
+#     if request.method == 'GET':
+#         return chart_view(request)
+#     elif request.method == 'POST':
+#         return send_choice(request)
+#     else:
+#         return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+
+def chart_view(request):
+    # Data for the charts (replace with your actual data)
+    unique_vessels = list(Schedule.objects.values_list('vessel', flat=True).distinct())
+    analytics_data = Analytics.objects.all().values()
+    df = pd.DataFrame(analytics_data)
+    # Create a pie chart using Plotly
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        vessel = data.get('vessel')
+        print(vessel)
+        if vessel:
+            samples = list(Analytics.objects.filter(vessel=vessel).values())
+            df = pd.DataFrame(samples)
+            print(df.head())
+            if not df.empty and 'diff_cgp_cmb' in df.columns:
+                # Create pie chart and histogram
+                pie = px.pie(df, names='diff_cgp_cmb', title='Pie Chart of Days Taken to Arrive at CMB from CGP')
+                hist = px.histogram(df, x='diff_cgp_cmb', title='Count Plot', labels={'diff_cgp_cmb': 'Days Taken to Arrive at CMB from CGP', 'Count': 'Days'})
+
+                # Save the plots as images
+                static_dir = os.path.join(settings.BASE_DIR, 'static', 'ml_model')
+                pie_image_path = os.path.join(static_dir, 'pie_chart.png')
+                hist_image_path = os.path.join(static_dir, 'hist_chart.png')
+
+            # Ensure the directory exists
+                os.makedirs(static_dir, exist_ok=True)
+                pio.write_image(pie, pie_image_path)
+                pio.write_image(hist, hist_image_path)
+
+                context = {
+                    'pie_chart': pie_image_path,
+                    'hist_chart': hist_image_path,
+                    'vessels': unique_vessels,
+                    'selected_vessel': vessel
+                }
+                print('Im sending the context from the POST request')
+                return JsonResponse(context)
+            else:
+                return HttpResponse('No data available or column not found')
+    else:
+
+        if not df.empty and 'diff_cgp_cmb' in df.columns:
+            
+            hist = px.histogram(df, x='diff_cgp_cmb', title='Count Plot', 
+                        labels={'diff_cgp_cmb': 'Days Taken to Arrive at CMB from CGP', 'Count': 'Days'}
+                        )
+            pie = px.pie(df, names='diff_cgp_cmb', title='Pie Chart of Days Taken to Arrive at CMB from CGP')
+            
+            # Convert the figure to HTML
+            hist_html = pio.to_html(hist, full_html=False)
+            
+            # Convert the figure to HTML
+            pie_html = pio.to_html(pie, full_html=False)
+        
+            context = {
+                'pie_chart': pie_html,
+                'hist_chart': hist_html,
+                'vessels': unique_vessels
+            }
+            print('Im sending the context from the GET request')
+            return render(request, 'ml_model/analytics.html', context)
+
+        else:
+            return HttpResponse('No data available or column not found')
+
+
+
+def card_list(request):
+
+    cards = Schedule.objects.all()
+    paginator = Paginator(cards, 12)  # Show 6 cards per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'ml_model/page.html', {'page_obj': page_obj})
+
+
+def page_view(request):
+    services = Schedule.objects.values_list('service', flat=True).distinct()
+    selected_services = request.GET.getlist('service')
+
+    if selected_services:
+        cards = Schedule.objects.filter(service__in=selected_services)
+    else:
+        cards = Schedule.objects.all()
+
+    paginator = Paginator(cards, 6)  # Show 9 cards per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'page_obj': page_obj,
+        'services': services,
+        'selected_services': selected_services,
+    }
+    return render(request, 'ml_model/page_filter.html', context)
+
+
+@csrf_exempt
+def add_vessels(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        vessels = data.get('vessels', [])
+
+        for vessel_data in vessels:
+            name = vessel_data.get('name')
+            service = vessel_data.get('service')
+            if name and service:
+                Vessel.objects.get_or_create(name=name, service=service)
+
+        return JsonResponse({'success': True})
+
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+@csrf_exempt
+def remove_vessel(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        vessel_name = data.get('vessel_name')
+        if vessel_name:
+            try:
+
+                vessel = Vessel.objects.get(name=vessel_name)
+                if vessel.service == 'CCE':
+                    del_cce_by_vessel_name(vessel)
+                elif vessel.service == 'BES':
+                    del_bes_by_vessel_name(vessel)
+                else:
+                    print('No service found')
+                vessel.delete()
+                return JsonResponse({'success': True})
+            except Vessel.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Vessel not found'})
+
+
+
+
+
+@csrf_exempt
+def update_vessel_service(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        vessel_name = data.get('name')
+        new_service = data.get('service')
+        previous_service = data.get('previous_service')
+
+        if vessel_name and new_service and previous_service:
+            try:
+                vessel = Vessel.objects.get(name=vessel_name)
+                vessel.service = new_service
+                vessel.previous_service = previous_service
+                vessel.save()
+                if new_service  == 'CCE' and previous_service == 'BES':
+                    first_query = (
+                                    BES.objects
+                                    .annotate(vessel_no_space=Lower(Replace(F('vessel'), Value(' '), Value(''))))
+                                    .filter(vessel_no_space=vessel_name.replace(" ", "").lower(), voyage_complete=0)
+                                    .first()
+                                )
+                    if first_query:
+                        bes_to_cce(first_query)
+                        del_bes(first_query)
+                        generate_cce_partial(first_query)
+                elif new_service  == 'BES' and previous_service == 'CCE':
+                    first_query = (
+                                    Schedule.objects
+                                    .annotate(vessel_no_space=Lower(Replace(F('vessel'), Value(' '), Value(''))))
+                                    .filter(vessel_no_space=vessel_name.replace(" ", "").lower(), voyage_complete=0)
+                                    .first()
+                                )
+                    if first_query:
+                        cce_to_bes(first_query)
+                        del_cce(first_query)
+                        generate_bes_partial(first_query)
+                else:
+                    print('No service change')
+
+                   
+                return JsonResponse({'success': True})
+            except Vessel.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Vessel not found'})
+
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+def show_cce_vessel(request):
+    
+    try:
+        cce_vessels = Vessel.objects.filter(service='CCE').values_list('name', flat=True)
+        return JsonResponse({'vessels': list(cce_vessels)})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def show_bes_vessel(request):
+    
+    try:
+        bes_vessels = Vessel.objects.filter(service='BES').values_list('name', flat=True)
+        return JsonResponse({'vessels': list(bes_vessels)})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+def cce_rv(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        eta_to_etb_cgp = data.get('eta_to_etb_cgp', 1)
+        etb_to_etd_cgp = data.get('etb_to_etd_cgp', 2)
+        cgp_to_cmb = data.get('cgp_to_cmb', 5)
+        eta_to_etb_cmb = data.get('eta_to_etb_cmb', 1)
+        etb_to_etd_cmb = data.get('etb_to_etd_cmb', 2)
+        cmb_to_cgp = data.get('cmb_to_cgp', 5)
+        if eta_to_etb_cgp and etb_to_etd_cgp and cgp_to_cmb and eta_to_etb_cmb and etb_to_etd_cmb and cmb_to_cgp:
+            CCE_RV.objects.all().delete()
+            CCE_RV.objects.create(
+                eta_to_etb_cgp=eta_to_etb_cgp,
+                etb_to_etd_cgp=etb_to_etd_cgp,
+                cgp_to_cmb=cgp_to_cmb,
+                eta_to_etb_cmb=eta_to_etb_cmb,
+                etb_to_etd_cmb=etb_to_etd_cmb,
+                cmb_to_cgp=cmb_to_cgp
+            )
+            return JsonResponse({'success': True})
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid data'})
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})    
+
+
+@csrf_exempt
+def bes_rv(request):
+    if request.method == 'POST' :
+        data = json.loads(request.body)
+        eta_to_etb_cgp = data.get('eta_to_etb_cgp', 1)
+        etb_to_etd_cgp = data.get('etb_to_etd_cgp', 2)
+        cgp_to_sin = data.get('cgp_to_sin', 5)  
+        eta_to_etb_sin = data.get('eta_to_etb_sin', 1)
+        etb_to_etd_sin = data.get('etb_to_etd_sin', 2)
+        sin_to_pkg = data.get('sin_to_pkg', 5)
+        eta_to_etb_pkg = data.get('eta_to_etb_pkg', 1)
+        etb_to_etd_pkg = data.get('etb_to_etd_pkg', 2)
+        pkg_to_cgp = data.get('pkg_to_cgp', 5)
+        if eta_to_etb_cgp and etb_to_etd_cgp and cgp_to_sin and eta_to_etb_sin and etb_to_etd_sin and sin_to_pkg and eta_to_etb_pkg and etb_to_etd_pkg and pkg_to_cgp:
+            BES_RV.objects.all().delete()
+            BES_RV.objects.create(
+                eta_to_etb_cgp=eta_to_etb_cgp,
+                etb_to_etd_cgp=etb_to_etd_cgp,
+                cgp_to_sin=cgp_to_sin,
+                eta_to_etb_sin=eta_to_etb_sin,
+                etb_to_etd_sin=etb_to_etd_sin,
+                sin_to_pkg=sin_to_pkg,
+                eta_to_etb_pkg=eta_to_etb_pkg,
+                etb_to_etd_pkg=etb_to_etd_pkg,
+                pkg_to_cgp=pkg_to_cgp
+            )
+            return JsonResponse({'success': True})
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid data'})
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+@csrf_exempt
+def db_reset(request):
+
+    Schedule.objects.all().delete()
+    BES.objects.all().delete()
+    cce_to_database()
+    bes_to_database()
+    return JsonResponse({'success': True})
+
+
+@csrf_exempt
+def generate_table_n_months(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        service = data.get('service')
+        months = data.get('months')
+        generate_schedule(service, months)
+        return JsonResponse({'success': True})
+
+
+@csrf_exempt
+def set_voyage_complete(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        model_name = data.get('model_name')
+        month = data.get('month')
+        year = data.get('year')
+        set_voyage_complete_before(model_name, month, year)
+        return JsonResponse({'success': True})
+
+
+def show_schedule(request):
+    schedules = list(Schedule.objects.all().order_by('eta_cgp').values())
+    return JsonResponse({'schedules': schedules}, safe=False)
+
+
+def show_bes(request):
+    bes = list(BES.objects.all().order_by('eta_cgp').values())
+    return JsonResponse({'bes': bes}, safe=False)
+        
+
+
+    
+
+
+
+
+
+   
+
+
+
 
 
 
