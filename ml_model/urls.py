@@ -28,8 +28,11 @@ urlpatterns = [
     path('set-cce-rv/', views.cce_rv, name='cce_rv'),
     path('set-bes-rv/', views.bes_rv, name='bes_rv'),
     path('show-schedule/', views.show_schedule, name='show_schedule'),
+    path('show-cce-complete/', views.show_cce_complete, name='show_cce_complete'),
     path('show-bes/', views.show_bes, name='show_bes'),
+    path('show-bes-complete/', views.show_bes_complete, name='show_bes_complete'),
     path('reset-db/', views.db_reset, name='reset_db'),
+    path('reset-db-complete/', views.db_reset_complete, name='reset_db_complete'),
     path('generate-schedule/', views.generate_table_n_months, name='generate_table_n_months'),
     path('set-voyage-complete/',views.set_voyage_complete,name='set_voyage_complete'),
 ]

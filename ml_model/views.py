@@ -450,8 +450,10 @@ def add_vessels(request):
         for vessel_data in vessels:
             name = vessel_data.get('name')
             service = vessel_data.get('service')
-            if name and service:
-                Vessel.objects.get_or_create(name=name, service=service)
+            operator = vessel_data.get('operator')
+             
+            if name and service and operator:
+                Vessel.objects.get_or_create(name=name, service=service,operator=operator)
 
         return JsonResponse({'success': True})
 
@@ -503,10 +505,19 @@ def update_vessel_service(request):
                                     .filter(vessel_no_space=vessel_name.replace(" ", "").lower(), voyage_complete=0)
                                     .first()
                                 )
+                    first_query_complete = (
+                        BES_Complete.objects
+                                    .annotate(vessel_no_space=Lower(Replace(F('vessel'), Value(' '), Value(''))))
+                                    .filter(vessel_no_space=vessel_name.replace(" ", "").lower(), voyage_complete=0)
+                                    .first()
+                    )
                     if first_query:
                         bes_to_cce(first_query)
+                        bes_to_cce_complete(first_query_complete)
                         del_bes(first_query)
+                        del_bes_complete(first_query_complete)
                         generate_cce_partial(first_query)
+                        generate_cce_partial_complete(first_query_complete)
                 elif new_service  == 'BES' and previous_service == 'CCE':
                     first_query = (
                                     Schedule.objects
@@ -514,10 +525,25 @@ def update_vessel_service(request):
                                     .filter(vessel_no_space=vessel_name.replace(" ", "").lower(), voyage_complete=0)
                                     .first()
                                 )
+                    
+                    first_query_complete = (
+                        
+                                    CCE_Complete.objects
+                                    .annotate(vessel_no_space=Lower(Replace(F('vessel'), Value(' '), Value(''))))
+                                    .filter(vessel_no_space=vessel_name.replace(" ", "").lower(), voyage_complete=0)
+                                    .first()
+                            
+                    )
+                    
+
+
                     if first_query:
-                        cce_to_bes(first_query)
-                        del_cce(first_query)
-                        generate_bes_partial(first_query)
+                        cce_to_bes(first_query)#add
+                        cce_to_bes_complete(first_query_complete)
+                        del_cce(first_query)#delete
+                        del_cce_complete(first_query_complete)
+                        generate_bes_partial(first_query)#partial generate
+                        generate_bes_partial_complete(first_query_complete)
                 else:
                     print('No service change')
 
@@ -615,12 +641,22 @@ def db_reset(request):
 
 
 @csrf_exempt
+def db_reset_complete(request):
+
+    CCE_Complete.objects.all().delete()
+    BES_Complete.objects.all().delete()
+    cce_to_database_complete()
+    bes_to_database_complete()
+    return JsonResponse({'success': True})
+
+@csrf_exempt
 def generate_table_n_months(request):
     if request.method == 'POST':
         data = json.loads(request.body)
         service = data.get('service')
         months = data.get('months')
         generate_schedule(service, months)
+        generate_schedule_complete(service, months)
         return JsonResponse({'success': True})
 
 
@@ -643,6 +679,15 @@ def show_schedule(request):
 def show_bes(request):
     bes = list(BES.objects.all().order_by('eta_cgp').values())
     return JsonResponse({'bes': bes}, safe=False)
+
+
+def show_bes_complete(request):
+    bes_complete = list(BES_Complete.objects.all().order_by('eta_cgp').values())
+    return JsonResponse({'bes_complete': bes_complete}, safe=False)
+
+def show_cce_complete(request):
+    cce_complete = list(CCE_Complete.objects.all().order_by('eta_cgp').values())
+    return JsonResponse({'cce_complete': cce_complete}, safe=False)
         
 
 
