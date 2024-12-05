@@ -35,6 +35,9 @@ urlpatterns = [
     path('reset-db-complete/', views.db_reset_complete, name='reset_db_complete'),
     path('generate-schedule/', views.generate_table_n_months, name='generate_table_n_months'),
     path('set-voyage-complete/',views.set_voyage_complete,name='set_voyage_complete'),
+    path('view-cce-bes/',views.cce_bes_view,name='view_cce_bes'),
+    path('get-all-columns/',views.get_all_columns,name='get_all_columns'),
+    path('update-bes-complete/',views.update_bes_complete,name='update_bes_complete'),
 ]
 
 

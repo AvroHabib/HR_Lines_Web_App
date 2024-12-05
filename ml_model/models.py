@@ -1,8 +1,26 @@
 from calendar import week
+from datetime import datetime, timezone
 import operator
 from sre_constants import AT_END
 from django.db import models
 
+
+
+def get_berthing_delay(eta, atb):
+    if eta and atb :
+        eta_as_datetime = datetime.combine(eta, datetime.min.time()).replace(tzinfo=timezone.utc)
+
+        time_diff = atb - eta_as_datetime
+            # Calculate hours and minutes
+        total_minutes = int(time_diff.total_seconds() / 60)
+        hours = total_minutes // 60
+        print(hours)
+        minutes = total_minutes % 60
+        print(minutes)
+            # Store the difference in "HH:MM" format
+        return f"{hours}h:{minutes}m"
+
+    return None
 
 class Vessel(models.Model):
     name = models.CharField(max_length=100)
@@ -236,12 +254,12 @@ class BES_Complete(models.Model):
     terminal_cgp = models.CharField(max_length=100,blank=True, null=True) 
     # Date fields for ETA, ETB, and ETD
     eta_cgp = models.DateField(verbose_name='ETA CGP',blank=True, null=True)
-    ata_cgp = models.DateField(verbose_name='ATA CGP',blank=True, null=True)
+    ata_cgp = models.DateTimeField(verbose_name='ATA CGP',blank=True, null=True)
     etb_cgp = models.DateField(verbose_name='ETB CGP',blank=True, null=True)
-    atb_cgp = models.DateField(verbose_name='ATB CGP',blank=True, null=True)
+    atb_cgp = models.DateTimeField(verbose_name='ATB CGP',blank=True, null=True)
     etd_cgp = models.DateField(verbose_name='ETD CGP',blank=True, null=True)
-    atd_cgp = models.DateField(verbose_name='ATD CGP',blank=True, null=True)
-    berthing_delay_cpg = models.IntegerField(blank=True, null=True)
+    atd_cgp = models.DateTimeField(verbose_name='ATD CGP',blank=True, null=True)
+    berthing_delay_cgp = models.CharField(max_length=15,blank=True, null=True)
 
  
     week_sin = models.CharField(max_length=10, verbose_name='Week SIN',blank=True, null=True)
@@ -251,39 +269,85 @@ class BES_Complete(models.Model):
     terminal_sin = models.CharField(max_length=100,blank=True, null=True)
 
     eta_sin = models.DateField(verbose_name='ETA SIN',blank=True, null=True)
-    ata_sin = models.DateField(verbose_name='ATA SIN',blank=True, null=True)
+    ata_sin = models.DateTimeField(verbose_name='ATA SIN',blank=True, null=True)
     etb_sin = models.DateField(verbose_name='ETB SIN',blank=True, null=True)
-    atb_sin = models.DateField(verbose_name='ATA SIN',blank=True, null=True)
+    atb_sin = models.DateTimeField(verbose_name='ATA SIN',blank=True, null=True)
     etd_sin = models.DateField(verbose_name='ETD SIN',blank=True, null=True)
-    atd_sin = models.DateField(verbose_name='ATD SIN',blank=True, null=True)
-    berthing_delay_sin = models.IntegerField(blank=True, null=True)
+    atd_sin = models.DateTimeField(verbose_name='ATD SIN',blank=True, null=True)
+    berthing_delay_sin = models.CharField(max_length=15,blank=True, null=True)
 
     week_pkg = models.CharField(max_length=10, verbose_name='Week PKG',blank=True, null=True)
     terminal_pkg = models.CharField(max_length=100,blank=True, null=True)
 
     eta_pkg = models.DateField(verbose_name='ETA PKG',blank=True, null=True)
-    ata_pkg = models.DateField(verbose_name='ATA PKG',blank=True, null=True)
+    ata_pkg = models.DateTimeField(verbose_name='ATA PKG',blank=True, null=True)
     etb_pkg = models.DateField(verbose_name='ETB PKG',blank=True, null=True)
-    atb_pkg = models.DateField(verbose_name='ATA PKG',blank=True, null=True)
+    atb_pkg = models.DateTimeField(verbose_name='ATA PKG',blank=True, null=True)
     etd_pkg = models.DateField(verbose_name='ETD PKG',blank=True, null=True)
-    atd_pkg = models.DateField(verbose_name='ATD PKG',blank=True, null=True)
-    berthing_delay_pkg = models.IntegerField(blank=True, null=True) 
+    atd_pkg = models.DateTimeField(verbose_name='ATD PKG',blank=True, null=True)
+    berthing_delay_pkg = models.CharField(max_length=15,blank=True, null=True) 
 
 
     week_cgp_2 = models.CharField(max_length=10, verbose_name='Week CGP-2',blank=True, null=True)
     terminal_cgp_2 = models.CharField(max_length=100,blank=True, null=True)
     
     eta_cgp_2 = models.DateField(verbose_name='ETA CGP-2',blank=True, null=True)
-    ata_cgp_2 = models.DateField(verbose_name='ATA CGP-2',blank=True, null=True)
+    ata_cgp_2 = models.DateTimeField(verbose_name='ATA CGP-2',blank=True, null=True)
     etb_cgp_2 = models.DateField(verbose_name='ETB CGP-2',blank=True, null=True)
-    atb_cgp_2 = models.DateField(verbose_name='ATA CGP-2',blank=True, null=True)
+    atb_cgp_2 = models.DateTimeField(verbose_name='ATA CGP-2',blank=True, null=True)
     etd_cgp_2 = models.DateField(verbose_name='ETD CGP-2',blank=True, null=True)
-    atd_cgp_2 = models.DateField(verbose_name='ATD CGP-2',blank=True, null=True)
-    berth_delay_cgp_2 = models.IntegerField(blank=True, null=True)
+    atd_cgp_2 = models.DateTimeField(verbose_name='ATD CGP-2',blank=True, null=True)
+    berthing_delay_cgp_2 = models.CharField(max_length=15,blank=True, null=True)
     voyage_complete = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.service} - {self.operator} - {self.vessel} - {self.voyage_s}"
+    
+
+
+    def save(self,*arg,**kwargs):
+        if self.pk:
+            old_data = BES_Complete.objects.get(pk=self.pk) 
+            if old_data.ata_cgp != self.ata_cgp:
+                self.rv1 = self.rv1 + (self.ata_cgp - old_data.ata_cgp).days #(old_data.ata_cgp_2 - self.ata_cgp).days
+                self.sb_v1 = self.sb_v1 + (self.ata_cgp - old_data.ata_cgp).days #(old_data.ata_pkg - self.ata_cgp).days
+            if old_data.atb_cgp != self.atb_cgp:
+                self.rv2 = self.rv2 + (self.atb_cgp - old_data.atb_cgp).days #(old_data.atb_cgp_2 - self.atb_cgp).days
+                self.sb_v2 = self.sb_v2 + (self.atb_cgp - old_data.atb_cgp).days #(old_data.atb_pkg - self.atb_cgp).days
+                self.berthing_delay_cgp = get_berthing_delay(self.eta_cgp, self.atb_cgp)
+            if old_data.atd_cgp != self.atd_cgp:
+                self.rv3 = self.rv3 + (self.atd_cgp - old_data.atd_cgp).days #(old_data.atd_cgp_2 - self.atd_cgp).days
+                self.sb_v3 =self.sb_v3 + (self.atd_cgp - old_data.atd_cgp).days #(old_data.atd_pkg - self.atd_cgp).days
+            if old_data.ata_sin != self.ata_sin:
+                print("ata_sin changed")
+            if old_data.atb_sin != self.atb_sin:
+                
+                self.berthing_delay_sin = get_berthing_delay(self.eta_sin, self.atb_sin)
+            if old_data.atd_sin != self.atd_sin:
+                print("atd_sin changed")
+            if old_data.ata_pkg != self.ata_pkg:
+                self.sb_v1 = self.sb_v1 + (self.ata_pkg - old_data.ata_pkg).days #(self.ata_pkg - old_data.ata_cgp).days
+                self.nb_v1 = self.nb_v1 + (self.ata_pkg - old_data.ata_pkg).days #(old_data.ata_cgp_2 - self.ata_pkg).days
+            if old_data.atb_pkg != self.atb_pkg:
+                self.sb_v2 = self.sb_v2 + (self.atb_pkg - old_data.atb_pkg).days #(self.atb_pkg - old_data.atb_cgp).days
+                self.nb_v2 = self.nb_v2 + (self.atb_pkg - old_data.atb_pkg).days #(old_data.atb_cgp_2 - self.atb_pkg).days
+                self.berthing_delay_pkg = get_berthing_delay(self.eta_pkg, self.atb_pkg)
+            if old_data.atd_pkg != self.atd_pkg:
+                self.sb_v3 = self.sb_v3 + (self.atd_pkg - old_data.atd_pkg).days #(self.atd_pkg - old_data.atd_cgp).days
+                self.nb_v3 = self.nb_v3 + (self.atd_pkg - old_data.atd_pkg).days#(old_data.atd_cgp_2 - self.atd_pkg).days
+            if old_data.ata_cgp_2 != self.ata_cgp_2:
+                self.rv1 = self.rv1 + (self.ata_cgp_2 - old_data.ata_cgp_2).days #(self.ata_cgp_2 - old_data.ata_cgp).days    
+                self.nb_v1 = self.nb_v1 + (self.ata_cgp_2 - old_data.ata_cgp_2).days #(self.ata_cgp_2 - old_data.ata_pkg).days
+            if old_data.atb_cgp_2 != self.atb_cgp_2:
+                self.rv2 = self.rv2 + (self.atb_cgp_2 - old_data.atb_cgp_2).days #(self.atb_cgp_2 - old_data.atb_cgp).days
+                self.nb_v2 = self.nb_v2 + (self.atb_cgp_2 - old_data.atb_cgp_2).days#(self.atb_cgp_2 - old_data.atb_pkg).days
+                self.berthing_delay_cgp_2 = get_berthing_delay(self.eta_cgp_2, self.atb_cgp_2)
+            if old_data.atd_cgp_2 != self.atd_cgp_2:
+                self.rv3 = self.rv3 + (self.atd_cgp_2 - old_data.atd_cgp_2).days#(self.atd_cgp_2 - old_data.atd_cgp).days
+                self.nb_v3 = self.nb_v3 + (self.atd_cgp_2 - old_data.atd_cgp_2).days #(self.atd_cgp_2 - old_data.atd_pkg).days
+        
+        super().save(*arg, **kwargs)
+
 
 
 
@@ -315,13 +379,13 @@ class CCE_Complete(models.Model):
     
     # Date fields for ETA, ETB, and ETD
     eta_cgp = models.DateField(verbose_name='ETA CGP',blank=True, null=True)
-    ata_cgp = models.DateField(verbose_name='ATA CGP',blank=True, null=True)
+    ata_cgp = models.DateTimeField(verbose_name='ATA CGP',blank=True, null=True)
     etb_cgp = models.DateField(verbose_name='ETB CGP',blank=True, null=True)
-    atb_cgp = models.DateField(verbose_name='ATB CGP',blank=True, null=True)
+    atb_cgp = models.DateTimeField(verbose_name='ATB CGP',blank=True, null=True)
     etd_cgp = models.DateField(verbose_name='ETD CGP',blank=True, null=True)
-    atd_cgp = models.DateField(verbose_name='ATD CGP',blank=True, null=True)
+    atd_cgp = models.DateTimeField(verbose_name='ATD CGP',blank=True, null=True)
 
-    berth_delay_cpg = models.IntegerField(blank=True, null=True)
+    berthing_delay_cgp = models.CharField(max_length=15,blank=True, null=True)
 
 
     week_cmb = models.CharField(max_length=10, verbose_name='Week CMB',blank=True, null=True)
@@ -330,26 +394,65 @@ class CCE_Complete(models.Model):
     terminal_cmb = models.CharField(max_length=100,blank=True, null=True)
     
     eta_cmb = models.DateField(verbose_name='ETA CMB',blank=True, null=True)
-    ata_cmb = models.DateField(verbose_name='ATA CMB',blank=True, null=True)
+    ata_cmb = models.DateTimeField(verbose_name='ATA CMB',blank=True, null=True)
     etb_cmb = models.DateField(verbose_name='ETB CMB',blank=True, null=True)
-    atb_cmb = models.DateField(verbose_name='ATA CMB',blank=True, null=True)
+    atb_cmb = models.DateTimeField(verbose_name='ATA CMB',blank=True, null=True)
     etd_cmb = models.DateField(verbose_name='ETD CMB',blank=True, null=True)
-    atd_cmb = models.DateField(verbose_name='ATA CMB',blank=True, null=True)
-    berthing_delay_cmb = models.IntegerField(blank=True, null=True)
+    atd_cmb = models.DateTimeField(verbose_name='ATA CMB',blank=True, null=True)
+    berthing_delay_cmb = models.CharField(max_length=15,blank=True, null=True)
     
     week_cgp_2 = models.CharField(max_length=10, verbose_name='Week CGP-2',blank=True, null=True)
     terminal_cgp_2 = models.CharField(max_length=100,blank=True, null=True)   
     eta_cgp_2 = models.DateField(verbose_name='ETA CGP-2',blank=True, null=True)
-    ata_cgp_2 = models.DateField(verbose_name='ATA CGP-2',blank=True, null=True)
+    ata_cgp_2 = models.DateTimeField(verbose_name='ATA CGP-2',blank=True, null=True)
     etb_cgp_2 = models.DateField(verbose_name='ETB CGP-2',blank=True, null=True)
-    atb_cgp_2 = models.DateField(verbose_name='ATA CGP-2',blank=True, null=True)
+    atb_cgp_2 = models.DateTimeField(verbose_name='ATA CGP-2',blank=True, null=True)
     etd_cgp_2 = models.DateField(verbose_name='ETD CGP-2',blank=True, null=True)
-    atd_cgp_2 = models.DateField(verbose_name='ATA CGP-2',blank=True, null=True)
-    berth_delay_cgp_2 = models.IntegerField(blank=True, null=True)  
+    atd_cgp_2 = models.DateTimeField(verbose_name='ATA CGP-2',blank=True, null=True)
+    berthing_delay_cgp_2 = models.CharField(max_length=15,blank=True, null=True)  
     voyage_complete = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.operator} - {self.service} - {self.vessel} - {self.voyage_s}"
+    
+
+
+    def save(self,*arg,**kwargs):
+        if self.pk:
+            old_data = CCE_Complete.objects.get(pk=self.pk) 
+            if old_data.ata_cgp != self.ata_cgp:
+                self.rv1 = self.rv1 + (self.ata_cgp - old_data.ata_cgp).days #(old_data.ata_cgp_2 - self.ata_cgp).days
+                self.sb_v1 = self.sb_v1 + (self.ata_cgp - old_data.ata_cgp).days #(old_data.ata_pkg - self.ata_cgp).days
+            if old_data.atb_cgp != self.atb_cgp:
+                self.rv2 = self.rv2 + (self.atb_cgp - old_data.atb_cgp).days #(old_data.atb_cgp_2 - self.atb_cgp).days
+                self.sb_v2 = self.sb_v2 + (self.atb_cgp - old_data.atb_cgp).days #(old_data.atb_pkg - self.atb_cgp).days
+                self.berthing_delay_cgp = get_berthing_delay(self.eta_cgp, self.atb_cgp)
+            if old_data.atd_cgp != self.atd_cgp:
+                self.rv3 = self.rv3 + (self.atd_cgp - old_data.atd_cgp).days #(old_data.atd_cgp_2 - self.atd_cgp).days
+                self.sb_v3 =self.sb_v3 + (self.atd_cgp - old_data.atd_cgp).days #(old_data.atd_pkg - self.atd_cgp).days
+            
+            if old_data.ata_cmb != self.ata_cmb:
+                self.sb_v1 = self.sb_v1 + (self.ata_cmb - old_data.ata_cmb).days #(self.ata_pkg - old_data.ata_cgp).days
+                self.nb_v1 = self.nb_v1 + (self.ata_cmb - old_data.ata_cmb).days #(old_data.ata_cgp_2 - self.ata_pkg).days
+            if old_data.atb_cmb != self.atb_cmb:
+                self.sb_v2 = self.sb_v2 + (self.atb_cmb - old_data.atb_cmb).days #(self.atb_pkg - old_data.atb_cgp).days
+                self.nb_v2 = self.nb_v2 + (self.atb_cmb - old_data.atb_cmb).days #(old_data.atb_cgp_2 - self.atb_pkg).days
+                self.berthing_delay_cmb = get_berthing_delay(self.eta_pkg, self.atb_pkg)
+            if old_data.atd_cmb != self.atd_cmb:
+                self.sb_v3 = self.sb_v3 + (self.atd_cmb - old_data.atd_cmb).days #(self.atd_pkg - old_data.atd_cgp).days
+                self.nb_v3 = self.nb_v3 + (self.atd_cmb - old_data.atd_cmb).days#(old_data.atd_cgp_2 - self.atd_pkg).days
+            if old_data.ata_cgp_2 != self.ata_cgp_2:
+                self.rv1 = self.rv1 + (self.ata_cgp_2 - old_data.ata_cgp_2).days #(self.ata_cgp_2 - old_data.ata_cgp).days    
+                self.nb_v1 = self.nb_v1 + (self.ata_cgp_2 - old_data.ata_cgp_2).days #(self.ata_cgp_2 - old_data.ata_pkg).days
+            if old_data.atb_cgp_2 != self.atb_cgp_2:
+                self.rv2 = self.rv2 + (self.atb_cgp_2 - old_data.atb_cgp_2).days #(self.atb_cgp_2 - old_data.atb_cgp).days
+                self.nb_v2 = self.nb_v2 + (self.atb_cgp_2 - old_data.atb_cgp_2).days#(self.atb_cgp_2 - old_data.atb_pkg).days
+                self.berthing_delay_cgp_2 = get_berthing_delay(self.eta_cgp_2, self.atb_cgp_2)
+            if old_data.atd_cgp_2 != self.atd_cgp_2:
+                self.rv3 = self.rv3 + (self.atd_cgp_2 - old_data.atd_cgp_2).days#(self.atd_cgp_2 - old_data.atd_cgp).days
+                self.nb_v3 = self.nb_v3 + (self.atd_cgp_2 - old_data.atd_cgp_2).days #(self.atd_cgp_2 - old_data.atd_pkg).days
+        
+        super().save(*arg, **kwargs)
 
 
 

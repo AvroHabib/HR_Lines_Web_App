@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BES Mother Table</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .table-container {
+      width: 90%;
+      max-width: 11000px;
+      max-height: 600px; /* Set the maximum height */
+      overflow: auto; /* Add scrollbars if content overflows */
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      background: #fff;
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+    }
+
+    thead {
+      position: sticky;
+      top: 0; /* Keep the header visible when scrolling */
+      background-color: #007BFF;
+      color: white;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      font-weight: bold;
+    }
+
+    tbody tr:hover {
+      background-color: #f1f1f1;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    td[contenteditable="true"] {
+      background-color: #fffbe6;
+      cursor: pointer;
+    }
+
+    td[contenteditable="true"]:focus {
+      outline: 2px solid #007BFF;
+    }
+
+    .loading {
+      font-size: 18px;
+      color: #007BFF;
+      margin-top: 20px;
+    }
+
+    .error {
+      color: red;
+      font-size: 18px;
+      margin-top: 20px;
+    }
+
+    .checkbox-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      padding: 0;
+    }
+
+    .checkbox-list label {
+      margin: 0 5px;
+      display: flex;
+      align-items: center;
+    }
+
+    .column-container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      max-width: 1100px;
+      margin: auto;
+      text-align: center;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <h1>BES Mother Table</h1>
+  <div id="message" class="loading">Loading data, please wait...</div>
+  <div class="table-container">
+    <table id="data-table" style="display: none;">
+      <thead id="table-header">
+        <!-- Headers will be dynamically generated -->
+      </thead>
+      <tbody id="table-body">
+        <!-- Data rows will be dynamically generated -->
+      </tbody>
+    </table>
+  </div>
+
+
+  <div class="column-container">
+    <h1>Select Columns</h1>
+    <div id="message-column" class="loading">Loading columns, please wait...</div>
+    <div class="checkbox-list" id="checkbox-list" style="display: none;"></div>
+    <button id="submit-button" style="display: none;">Submit Selected</button>
+  </div>
+
+  <br><br>
+
+  <h2 id="new-table-h2" style="display: none;">Table With Selected Columns</h2>
+  <div id="message-new-table" class="loading" style="display:none;">Loading data, please wait...</div>
+  <div class="table-container">
+    <table id="data-table-2" style="display: none;">
+      <thead id="table-header-2">
+        <!-- Headers will be dynamically generated -->
+      </thead>
+      <tbody id="table-body-2">
+        <!-- Data rows will be dynamically generated -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const editableColumns = ['ata_cgp', 'atb_cgp','atd_cgp','ata_sin','atb_sin','atd_sin','ata_pkg','atb_pkg','atd_pkg','ata_cgp_2','atb_cgp_2','atd_cgp_2']; // Specify columns that should be editable
+
+    async function fetchData() {
+      const messageDiv = document.getElementById('message');
+      const dataTable = document.getElementById('data-table');
+      const tableHeader = document.getElementById('table-header');
+      const tableBody = document.getElementById('table-body');
+
+      try {
+        // Fetch data from the backend endpoint
+        const response = await fetch('http://localhost:8000/mlmodel/show-bes-complete/');
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json();
+
+        // Extract `cce_complete` array
+        const rows = data.bes_complete;
+
+        // Clear loading message
+        messageDiv.style.display = 'none';
+
+        // Handle empty data
+        if (!rows || rows.length === 0) {
+          messageDiv.textContent = 'No data available.';
+          messageDiv.style.display = 'block';
+          return;
+        }
+
+        // Generate table headers dynamically
+        const headers = Object.keys(rows[0]); // Use keys of the first object for headers
+        const headerRow = document.createElement('tr');
+        headers.forEach(header => {
+          const th = document.createElement('th');
+          th.textContent = header.charAt(0).toLowerCase() + header.slice(1);
+          headerRow.appendChild(th);
+        });
+        tableHeader.appendChild(headerRow);
+
+        // Populate the table body
+        rows.forEach(item => {
+          const row = document.createElement('tr');
+          headers.forEach(header => {
+            const td = document.createElement('td');
+
+            // Make specific columns editable
+            if (editableColumns.includes(header)) {
+              td.contentEditable = true;
+              td.dataset.id = item.id;
+              td.dataset.column = header;
+              td.textContent = item[header] !== null ? item[header] : 'N/A';
+
+              // Add event listener to handle changes
+              td.addEventListener('blur', (event) => {
+                const newValue = event.target.textContent.trim();
+                sendUpdateToBackend(item.id, header, newValue);
+              });
+            } else {
+              td.textContent = item[header] !== null ? item[header] : 'N/A';
+            }
+            row.appendChild(td);
+          });
+          tableBody.appendChild(row);
+        });
+
+        // Show the table
+        dataTable.style.display = 'table';
+      } catch (error) {
+        messageDiv.textContent = `Error: ${error.message}`;
+        messageDiv.className = 'error';
+      }
+    }
+
+    async function sendUpdateToBackend(rowId, columnName, newValue) {
+      try {
+        const response = await fetch('http://localhost:8000/mlmodel/update-bes-complete/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: rowId,
+            column: columnName,
+            value: newValue,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('Update response:', result);
+      } catch (error) {
+        console.error('Error updating data:', error.message);
+        alert('Failed to update data.');
+      }
+    }
+
+    // Fetch data on page load
+    //window.onload = fetchData;
+
+
+    const getSavedSelections = () => {
+      const saved = localStorage.getItem('selectedColumns');
+      return saved ? JSON.parse(saved) : [];
+    };
+
+    // Save selections to localStorage
+    const saveSelections = (selected) => {
+      localStorage.setItem('selectedColumns', JSON.stringify(selected));
+    };
+
+    const fetchColumns = async () => {
+      const messageDiv = document.getElementById('message-column');
+      const checkboxList = document.getElementById('checkbox-list');
+      const submitButton = document.getElementById('submit-button');
+      const savedSelections = getSavedSelections();
+
+      try {
+        // Fetch data from the backend
+        const response = await fetch('http://localhost:8000/mlmodel/get-all-columns/');
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json();
+
+        // Extract column names from response
+        const columns = data.columns_bes;
+
+        // Clear loading message
+        messageDiv.style.display = 'none';
+
+        // Handle empty data
+        if (!columns || columns.length === 0) {
+          messageDiv.textContent = 'No columns available.';
+          messageDiv.style.display = 'block';
+          return;
+        }
+
+        // Populate the checkbox list
+        columns.forEach((column) => {
+          const label = document.createElement('label');
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.value = column; // Send column name to the backend
+          checkbox.id = `checkbox-${column}`;
+          checkbox.name = column;
+
+          // Restore saved state
+          if (savedSelections.includes(column)) {
+            checkbox.checked = true;
+          }
+
+          label.htmlFor = `checkbox-${column}`;
+          label.textContent = column;
+          label.prepend(checkbox);
+          checkboxList.appendChild(label);
+        });
+
+        // Show the checkbox list and submit button
+        checkboxList.style.display = 'flex';
+        submitButton.style.display = 'block';
+      } catch (error) {
+        messageDiv.textContent = `Error: ${error.message}`;
+        messageDiv.className = 'error';
+      }
+    };
+
+    const handleSubmit = async () => {
+      const checkboxes = document.querySelectorAll('.checkbox-list input[type="checkbox"]:checked');
+      const selectedColumns = Array.from(checkboxes).map((checkbox) => checkbox.value);
+      console.log('Selected columns:', selectedColumns);
+      const messageDiv = document.getElementById('message-new-table');
+      const dataTable = document.getElementById('data-table-2');
+      const tableHeader = document.getElementById('table-header-2');
+      const tableBody = document.getElementById('table-body-2');
+      const newTableH2 = document.getElementById('new-table-h2');
+      tableHeader.innerHTML = ''; // Clear existing headers
+      tableBody.innerHTML = ''; // Clear existing rows
+      messageDiv.style.display = 'block';
+      newTableH2.style.display = 'Block';
+      if (selectedColumns.length === 0) {
+        alert('No columns selected!');
+        return;
+      }
+
+      try {
+        // Save selected columns to localStorage
+        saveSelections(selectedColumns);
+
+        // Send selected columns to the backend
+        const response = await fetch('http://localhost:8000/mlmodel/get-all-columns/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ selected_columns: selectedColumns }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+
+        const result = await response.json();
+        alert('Columns submitted successfully!');
+        console.log('Response from backend:', result);
+        const rows = result.data;
+        messageDiv.style.display = 'none';
+        if(!rows || rows.length === 0) {
+          messageDiv.textContent = 'No data available.';
+          messageDiv.style.display = 'block';
+          return;
+        }
+        const headers = Object.keys(rows[0]);
+        const headerRow = document.createElement('tr');
+        headers.forEach(header => {
+          const th = document.createElement('th');
+          th.textContent = header.charAt(0).toLowerCase() + header.slice(1);
+          headerRow.appendChild(th);
+        });
+        tableHeader.appendChild(headerRow);
+        
+
+        rows.forEach(item => {
+          const row = document.createElement('tr');
+          headers.forEach(header => {
+            const td = document.createElement('td');
+            td.textContent = item[header] !== null ? item[header] : 'N/A';
+            row.appendChild(td);
+          });
+          tableBody.appendChild(row);
+        });
+
+        dataTable.style.display = 'table';
+      } catch (error) {
+        console.error('Error submitting columns:', error.message);
+        alert('Failed to submit selected columns.');
+      }
+    };
+
+    // Fetch data on page load
+    //window.onload = fetchColumns;
+
+    // Attach submit event
+    document.getElementById('submit-button').addEventListener('click', handleSubmit);
+    window.addEventListener('load', async () => {
+  await Promise.all([fetchData(), fetchColumns()]);
+});
+
+  </script>
+</body>
+</html>

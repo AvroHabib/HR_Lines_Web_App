@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Send JSON Data</title>
+  <style>
+    form {
+      max-width: 400px;
+      margin: auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    label {
+      display: block;
+      margin-bottom: 10px;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #007BFF;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <h1 style="text-align: center;">CCE Service</h1>
+
+  <form id="jsonForm">
+    <label>
+      ETA to ETB CGP:
+      <input type="number" id="eta_to_etb_cgp" required>
+    </label>
+    <label>
+      ETB to ETD CGP:
+      <input type="number" id="etb_to_etd_cgp" required>
+    </label>
+    <label>
+      CGP to CMB:
+      <input type="number" id="cgp_to_cmb" required>
+    </label>
+    <label>
+      ETA to ETB CMB:
+      <input type="number" id="eta_to_etb_cmb" required>
+    </label>
+    <label>
+      ETB to ETD CMB:
+      <input type="number" id="etb_to_etd_cmb" required>
+    </label>
+    <label>
+      CMB to CGP:
+      <input type="number" id="cmb_to_cgp" required>
+    </label>
+    <button type="button" id="sendButton">Send Data</button>
+  </form>
+
+  <script>
+    document.getElementById('sendButton').addEventListener('click', async () => {
+      // Collect input values
+      const data = {
+        eta_to_etb_cgp: parseFloat(document.getElementById('eta_to_etb_cgp').value),
+        etb_to_etd_cgp: parseFloat(document.getElementById('etb_to_etd_cgp').value),
+        cgp_to_cmb: parseFloat(document.getElementById('cgp_to_cmb').value),
+        eta_to_etb_cmb: parseFloat(document.getElementById('eta_to_etb_cmb').value),
+        etb_to_etd_cmb: parseFloat(document.getElementById('etb_to_etd_cmb').value),
+        cmb_to_cgp: parseFloat(document.getElementById('cmb_to_cgp').value)
+      };
+
+      try {
+        // Send JSON data to backend
+        const response = await fetch('http://127.0.0.1:8000/api/data', { // Replace with your backend URL
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          alert(`Response from backend: ${JSON.stringify(result)}`);
+        } else {
+          alert('Failed to send data to the backend.');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while sending data.');
+      }
+    });
+  </script>
+</body>
+</html>

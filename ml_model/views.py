@@ -456,8 +456,9 @@ def add_vessels(request):
                 Vessel.objects.get_or_create(name=name, service=service,operator=operator)
 
         return JsonResponse({'success': True})
+    return render(request, 'ml_model/add_vessels.html')
 
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+    # return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
 
 @csrf_exempt
@@ -595,7 +596,8 @@ def cce_rv(request):
             return JsonResponse({'success': True})
         else:
             return JsonResponse({'success': False, 'error': 'Invalid data'})
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})    
+    #return JsonResponse({'success': False, 'error': 'Invalid request method'})
+    return render(request, 'ml_model/set_cce_rv.html')    
 
 
 @csrf_exempt
@@ -627,7 +629,8 @@ def bes_rv(request):
             return JsonResponse({'success': True})
         else:
             return JsonResponse({'success': False, 'error': 'Invalid data'})
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+    #return JsonResponse({'success': False, 'error': 'Invalid request method'})
+    return render(request, 'ml_model/set_bes_rv.html')
 
 
 @csrf_exempt
@@ -688,6 +691,58 @@ def show_bes_complete(request):
 def show_cce_complete(request):
     cce_complete = list(CCE_Complete.objects.all().order_by('eta_cgp').values())
     return JsonResponse({'cce_complete': cce_complete}, safe=False)
+
+
+
+
+def cce_bes_view(request):
+    return render(request, 'ml_model/view_cce_bes.html')
+
+
+@csrf_exempt
+def get_all_columns(request):
+
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        selected_columns = data.get('selected_columns',[])
+
+        if not selected_columns:
+            return JsonResponse({"error": "No columns selected"}, status=400)
+    
+        queryset = BES_Complete.objects.values(*selected_columns).order_by('eta_cgp')
+        return JsonResponse({"data": list(queryset)}, safe=False)
+
+
+       
+
+    fields = BES_Complete._meta.get_fields()
+    columns_bes = [field.name for field in fields if field.concrete]
+    fields = CCE_Complete._meta.get_fields()
+    columns_cce = [field.name for field in fields if field.concrete]
+    return JsonResponse({'columns_bes': columns_bes, 'columns_cce': columns_cce})
+
+
+@csrf_exempt
+def update_bes_complete(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        pk = data.get('id')
+        column = data.get('column')
+        value = data.get('value')
+        datetime_obj = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        print(datetime_obj)
+
+        print(type(value))
+        print(f'pk : {pk} column : {column} value : {value}')
+
+        if pk and column and value:
+            bes_complete = BES_Complete.objects.get(pk=pk)
+            
+            setattr(bes_complete, column, datetime_obj)
+            bes_complete.save()
+            return JsonResponse({'success': True})
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid data'})
         
 
 

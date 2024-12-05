@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vessel Data Input</title>
+  <style>
+
+/* body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f9fa;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    #show-vessel {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 300px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 0.9rem;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #007BFF;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .existing-vessel {
+      margin-bottom: 10px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+ form {
+      max-width: 400px;
+      margin: auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    label {
+      display: block;
+      margin-bottom: 10px;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    } 
+    button {
+      
+      padding: 10px;
+      background-color: #007BFF;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .vessel-group {
+      margin-bottom: 10px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    
+  
+
+   
+
+    #show-vessel {
+      padding: 20px;
+      text-align: left;
+    }
+    
+    .existing-vessel {
+      margin-bottom: 10px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    } */
+  </style>
+</head>
+<body>
+  <h1 style="text-align: center;">Enter Vessel Data</h1>
+
+  <form id="vesselForm">
+    <div id="vesselContainer">
+      <!-- Vessel input groups will be added here -->
+    </div>
+    <button type="button" id="addVesselButton">Add Vessel</button>
+    <button type="button" id="sendButton">Send Data</button>
+    <button type="button" id="showExistingVessels">Show Existing Vessels</button>
+  </form>
+
+  <div id="show-vessel"></div>
+
+  <!-- JavaScript -->
+  <script>
+    const vesselContainer = document.getElementById('vesselContainer');
+    const showVessel = document.getElementById('show-vessel');
+    const addVesselButton = document.getElementById('addVesselButton');
+    const sendButton = document.getElementById('sendButton');
+    const showExistingVesselsButton = document.getElementById('showExistingVessels');
+    // Event listener for "Show Existing Vessels" button
+    showExistingVesselsButton.addEventListener('click', async () => {
+      try {
+      const response = await fetch('http://localhost:8000/mlmodel/show-cce-vessel/');
+      if (response.ok) {
+        const data = await response.json();
+        showVessel.innerHTML = '';
+        
+        data.vessels.forEach(vessel => {
+        const vesselGroup = document.createElement('div');
+        vesselGroup.className = 'existing-vessel';
+        vesselGroup.innerHTML = `
+
+          <label>
+          Name: <input type="text" class="vessel-name" value="${vessel}" readonly>
+          </label>
+          <button type="button" class="removeVesselButton">Remove</button>
+        `;
+        showVessel.appendChild(vesselGroup);
+
+        // Add remove functionality
+        vesselGroup.querySelector('.removeVesselButton').addEventListener('click', () => {
+          vesselGroup.remove();
+        });
+        });
+      } else {
+        alert('Failed to fetch existing vessels.');
+      }
+      } catch (error) {
+      console.error('Error:', error);
+      alert('An error occurred while fetching data.');
+      }
+    });
+
+    // Function to add a new vessel input group
+    function addVesselInput() {
+      const vesselGroup = document.createElement('div');
+      vesselGroup.className = 'vessel-group';
+      vesselGroup.innerHTML = `
+        <label>
+          Name: <input type="text" class="vessel-name" placeholder="Enter vessel name" required>
+        </label>
+        <label>
+          Service: <input type="text" class="vessel-service" placeholder="Enter service" required>
+        </label>
+        <label>
+          Operator: <input type="text" class="vessel-operator" placeholder="Enter operator" required>
+        </label>
+        <button type="button" class="removeVesselButton">Remove</button>
+      `;
+      vesselContainer.appendChild(vesselGroup);
+
+      // Add remove functionality
+      vesselGroup.querySelector('.removeVesselButton').addEventListener('click', () => {
+        vesselGroup.remove();
+      });
+    }
+
+    // Event listener for "Add Vessel" button
+    addVesselButton.addEventListener('click', addVesselInput);
+
+    // Event listener for "Send Data" button
+    sendButton.addEventListener('click', async () => {
+      const vessels = [];
+      const vesselGroups = document.querySelectorAll('.vessel-group');
+
+      // Collect data from input fields
+      vesselGroups.forEach(group => {
+        const name = group.querySelector('.vessel-name').value;
+        const service = group.querySelector('.vessel-service').value;
+        const operator = group.querySelector('.vessel-operator').value;
+
+        if (name && service && operator) {
+          vessels.push({ name, service, operator });
+        }
+      });
+
+      const data = { vessels };
+      console.log(data);
+
+      try {
+        // Send JSON to backend
+        const response = await fetch('http://127.0.0.1:8000/api/vessels', { // Replace with your backend URL
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          alert(`Response from backend: ${JSON.stringify(result)}`);
+        } else {
+          alert('Failed to send vessel data to the backend.');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while sending data.');
+      }
+    });
+  </script>
+</body>
+</html>
