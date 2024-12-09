@@ -1,0 +1,51 @@
+{%extends 'ml_model/base.html'%}
+{%block title%}Reset Page{%endblock%}
+{%block content%}
+<div class="reset-msg-wrapper">
+    <div class="message-box">
+        <h2>Reset Database</h2>
+        <p>Are you sure you want to reset the database? This action cannot be undone.</p>
+        <div class="button-group">
+          <button class="button confirm" id="yesButton">Yes</button>
+          <button class="button cancel" id="noButton">Cancel</button>
+        </div>
+      </div>
+
+</div>
+
+  
+
+  <script>
+    const yesButton = document.getElementById('yesButton');
+    const noButton = document.getElementById('noButton');
+
+    // When "Yes" is clicked
+    yesButton.addEventListener('click', async () => {
+      const confirmation = confirm("This action will reset the database. Are you sure?");
+      if (confirmation) {
+        try {
+          const response = await fetch('http://localhost:8000/mlmodel/reset-db-complete/', { // Replace with your API endpoint
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            alert("Database has been successfully reset!");
+          } else {
+            alert("Failed to reset the database. Please try again.");
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert("An error occurred. Please try again.");
+        }
+      }
+    });
+
+    // When "Cancel" is clicked
+    noButton.addEventListener('click', () => {
+      window.location.href = '/mlmodel/vessel-schedule/'; // Redirect to the homepage
+    });
+  </script>
+{%endblock%}

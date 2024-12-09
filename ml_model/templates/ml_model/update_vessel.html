@@ -1,0 +1,86 @@
+{%extends 'ml_model/base.html'%}
+{%block title %}Update Vessel{%endblock%}
+{%block content %}
+  <h1 style="text-align: center;">Service Data Input</h1>
+
+  <form id="serviceForm" class="service-form">
+    <label for="name">Name:</label>
+    <input type="text" id="name" name="name" placeholder="Enter name (e.g., HR AARAI &quot;MRAI&quot;)" required>
+
+    <label for="service">Service:</label>
+    <input type="text" id="service" name="service" placeholder="Enter service (e.g., BES)" required>
+
+    <label for="previousService">Previous Service:</label>
+    <input type="text" id="previousService" name="previousService" placeholder="Enter previous service (e.g., CCE)" required>
+
+    <button type="button" id="sendButton" class="service-btn">Send Data</button>
+  </form>
+
+  <div id="responseOutput" class="response-output" style="display: none;">
+    <h4>Backend Response:</h4>
+    <pre id="responseText"></pre>
+  </div>
+
+  <!-- JavaScript -->
+  <script>
+    const sendButton = document.getElementById('sendButton');
+    const responseOutput = document.getElementById('responseOutput');
+    const responseText = document.getElementById('responseText');
+
+    // Function to save form data to localStorage
+    function saveToLocalStorage() {
+        const name = document.getElementById('name').value.trim();
+        const service = document.getElementById('service').value.trim();
+        const previousService = document.getElementById('previousService').value.trim();
+
+        const payload = { name, service, previous_service: previousService };
+        localStorage.setItem('vesselData', JSON.stringify(payload));
+
+        console.log('Data saved to localStorage:', payload);
+    }
+
+    // Function to load form data from localStorage
+    function loadFromLocalStorage() {
+        const savedData = JSON.parse(localStorage.getItem('vesselData'));
+        if (savedData) {
+            document.getElementById('name').value = savedData.name || '';
+            document.getElementById('service').value = savedData.service || '';
+            document.getElementById('previousService').value = savedData.previous_service || '';
+
+            console.log('Data loaded from localStorage:', savedData);
+        }
+    }
+
+    // Event listener for the "Send" button
+    sendButton.addEventListener('click', () => {
+        // Collect form data
+        const name = document.getElementById('name').value.trim();
+        const service = document.getElementById('service').value.trim();
+        const previousService = document.getElementById('previousService').value.trim();
+
+        if (!name || !service || !previousService) {
+            alert('Please fill in all fields.');
+            return;
+        }
+
+        const payload = {
+            name,
+            service,
+            previous_service: previousService,
+        };
+
+        console.log('Payload to be saved:', payload);
+
+        // Save data locally instead of sending it to the backend
+        saveToLocalStorage();
+
+        // Display a success message
+        responseOutput.style.display = 'block';
+        responseText.textContent = 'Data saved locally:\n' + JSON.stringify(payload, null, 2);
+    });
+
+    // Load data from localStorage on page load
+    window.addEventListener('load', loadFromLocalStorage);
+</script>
+
+{%endblock%}

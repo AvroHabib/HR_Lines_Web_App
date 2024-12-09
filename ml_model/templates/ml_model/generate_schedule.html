@@ -1,0 +1,69 @@
+{%extends 'ml_model/base.html'%}
+{%block title%}Generate Schedule{%endblock%}
+{%block content%}
+  <h1 style="text-align: center;">Generate Schedule</h1>
+
+  <form id="serviceForm" class="service-form">
+    <label for="service">Service:</label>
+    <input type="text" id="service" name="service" placeholder="Enter service (e.g., BES)" required>
+
+    <label for="months">Months:</label>
+    <input type="number" id="months" name="months" placeholder="Enter number of months (e.g., 3)" min="1" required>
+
+    <button type="button" id="sendButton" class="service-btn">Send Data</button>
+  </form>
+
+  <div id="responseOutput" class="response-output" style="display: none;">
+    <h4>Backend Response:</h4>
+    <pre id="responseText"></pre>
+  </div>
+
+  <!-- JavaScript -->
+  <script>
+    const serviceForm = document.getElementById('serviceForm');
+    const sendButton = document.getElementById('sendButton');
+    const responseOutput = document.getElementById('responseOutput');
+    const responseText = document.getElementById('responseText');
+
+    sendButton.addEventListener('click', async () => {
+      // Collect form data
+      const service = document.getElementById('service').value.trim();
+      const months = document.getElementById('months').value.trim();
+
+      if (!service || !months) {
+        alert('Please fill in all fields.');
+        return;
+      }
+
+      const payload = {
+        service,
+        months: parseInt(months, 10)
+      };
+
+      console.log('Payload to be sent:', payload);
+
+      try {
+        const response = await fetch('http://localhost:8000/mlmodel/generate-schedule/', { // Replace with your backend URL
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          responseOutput.style.display = 'block';
+          responseText.textContent = JSON.stringify(result, null, 2);
+        } else {
+          responseOutput.style.display = 'block';
+          responseText.textContent = `Error: ${response.status} - ${response.statusText}`;
+        }
+      } catch (error) {
+        responseOutput.style.display = 'block';
+        responseText.textContent = `An error occurred: ${error.message}`;
+      }
+    });
+  </script>
+
+{%endblock%}

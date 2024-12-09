@@ -50,8 +50,13 @@ model = joblib.load('ml_model/model.pkl')
 # - Wk/ ETB CGP
 
 
+
+def vessel_schedule(request):
+    return render (request, 'ml_model/base.html')
+
+
 def home(request):
-    return HttpResponse('Hello World')
+    return render (request, 'ml_model/base.html')
 
 
 # def predict(request):
@@ -447,13 +452,27 @@ def add_vessels(request):
         data = json.loads(request.body)
         vessels = data.get('vessels', [])
 
+        # for vessel_data in vessels:
+        #     name = vessel_data.get('name')
+        #     service = vessel_data.get('service')
+        #     operator = vessel_data.get('operator')
+             
+        #     if name and service and operator:
+        #         Vessel.objects.get_or_create(name=name, service=service,operator=operator)
+
         for vessel_data in vessels:
             name = vessel_data.get('name')
             service = vessel_data.get('service')
             operator = vessel_data.get('operator')
              
             if name and service and operator:
-                Vessel.objects.get_or_create(name=name, service=service,operator=operator)
+                # Check if a vessel with the same name already exists
+                vessel, created = Vessel.objects.get_or_create(name=name, defaults={'service': service, 'operator': operator})
+                if not created:
+                    # If the vessel already exists, update its service and operator
+                    vessel.service = service
+                    vessel.operator = operator
+                    vessel.save()
 
         return JsonResponse({'success': True})
     return render(request, 'ml_model/add_vessels.html')
@@ -553,7 +572,7 @@ def update_vessel_service(request):
             except Vessel.DoesNotExist:
                 return JsonResponse({'success': False, 'error': 'Vessel not found'})
 
-    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+    return render(request, 'ml_model/update_vessel.html')
 
 def show_cce_vessel(request):
     
@@ -593,6 +612,7 @@ def cce_rv(request):
                 etb_to_etd_cmb=etb_to_etd_cmb,
                 cmb_to_cgp=cmb_to_cgp
             )
+            
             return JsonResponse({'success': True})
         else:
             return JsonResponse({'success': False, 'error': 'Invalid data'})
@@ -661,6 +681,7 @@ def generate_table_n_months(request):
         generate_schedule(service, months)
         generate_schedule_complete(service, months)
         return JsonResponse({'success': True})
+    return render(request, 'ml_model/generate_schedule.html')
 
 
 @csrf_exempt
@@ -695,12 +716,15 @@ def show_cce_complete(request):
 
 
 
-def cce_bes_view(request):
-    return render(request, 'ml_model/view_cce_bes.html')
+def bes_view(request):
+    return render(request, 'ml_model/view_bes.html')
+
+def cce_view(request):
+    return render(request, 'ml_model/view_cce.html')
 
 
 @csrf_exempt
-def get_all_columns(request):
+def get_all_columns_bes(request):
 
     if request.method == 'POST':
         data = json.loads(request.body)
@@ -710,6 +734,29 @@ def get_all_columns(request):
             return JsonResponse({"error": "No columns selected"}, status=400)
     
         queryset = BES_Complete.objects.values(*selected_columns).order_by('eta_cgp')
+        return JsonResponse({"data": list(queryset)}, safe=False)
+
+
+       
+
+    fields = BES_Complete._meta.get_fields()
+    columns_bes = [field.name for field in fields if field.concrete]
+    fields = CCE_Complete._meta.get_fields()
+    columns_cce = [field.name for field in fields if field.concrete]
+    return JsonResponse({'columns_bes': columns_bes, 'columns_cce': columns_cce})
+
+
+@csrf_exempt
+def get_all_columns_cce(request):
+
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        selected_columns = data.get('selected_columns',[])
+
+        if not selected_columns:
+            return JsonResponse({"error": "No columns selected"}, status=400)
+    
+        queryset = CCE_Complete.objects.values(*selected_columns).order_by('eta_cgp')
         return JsonResponse({"data": list(queryset)}, safe=False)
 
 
@@ -743,6 +790,46 @@ def update_bes_complete(request):
             return JsonResponse({'success': True})
         else:
             return JsonResponse({'success': False, 'error': 'Invalid data'})
+
+
+
+@csrf_exempt
+def update_cce_complete(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        pk = data.get('id')
+        column = data.get('column')
+        value = data.get('value')
+        datetime_obj = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        print(datetime_obj)
+
+        print(type(value))
+        print(f'pk : {pk} column : {column} value : {value}')
+
+        if pk and column and value:
+            cce_complete = CCE_Complete.objects.get(pk=pk)
+            
+            setattr(cce_complete, column, datetime_obj)
+            cce_complete.save()
+            return JsonResponse({'success': True})
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid data'})
+
+
+def reset_page(request):
+    return render(request, 'ml_model/reset.html')
+
+
+def remove_vessel_page(request):
+    return render(request, 'ml_model/remove-vessel.html')
+
+
+
+
+def get_all_vessel(request):
+    vessels = list(Vessel.objects.all().values())
+    return JsonResponse({'vessels': vessels}, safe=False)
+        
         
 
 

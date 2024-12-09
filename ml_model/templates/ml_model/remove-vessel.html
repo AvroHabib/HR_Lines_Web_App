@@ -1,0 +1,71 @@
+{%extends 'ml_model/base.html'%}
+{%block title%}Remove Vessel{%endblock%}    
+{%block content%}
+    <script>
+        // Fetch vessel names from the backend and populate the dropdown
+        async function fetchVessels() {
+            const response = await fetch('/get-all-vessel/');
+            const data = await response.json();
+            console.log(data.vessels);
+            vessels = data.vessels;
+            const selectElement = document.getElementById('vessel-select');
+
+            vessels.forEach(vessel => {
+                console.log(vessel.name);
+                const option = document.createElement('option');
+                option.value = vessel.id;
+                option.textContent = vessel.name;
+                selectElement.appendChild(option);
+            });
+        }
+
+        // Remove the selected vessel
+        async function removeVessel() {
+            const vesselId = document.getElementById('vessel-select').value;
+            const response = await fetch('/delete-vessel/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': getCSRFToken()  // Ensure CSRF token is included
+                },
+                body: `vessel_id=${vesselId}`
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                alert(result.message);
+                location.reload();  // Reload the page to refresh the vessel list
+            } else {
+                alert(result.message);
+            }
+        }
+
+        // Utility function to get CSRF token from cookies
+        function getCSRFToken() {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'csrftoken') {
+                    return value;
+                }
+            }
+            return '';
+        }
+
+        // Fetch vessels on page load
+        window.onload = fetchVessels;
+    </script>
+</head>
+
+    
+
+        <h1 style="text-align: center;">Remove Vessel</h1>
+        <form onsubmit="event.preventDefault(); removeVessel();">
+            <label for="vessel-select">Select Vessel to Remove:</label>
+            <select id="vessel-select" required>
+                <option value="" disabled selected>-- Select a Vessel --</option>
+            </select>
+            <button type="submit">Remove</button>
+        </form>
+    
+{%endblock%}

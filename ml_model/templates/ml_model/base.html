@@ -1,0 +1,609 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}My Django App{% endblock %}</title>
+    <style>
+        /* General styles */
+        body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .table-container {
+      width: 100%;
+      max-width: 11000px;
+      max-height: 600px; /* Set the maximum height */
+      overflow: auto; /* Add scrollbars if content overflows */
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      background: #fff;
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+    }
+
+    thead {
+      position: sticky;
+      top: 0; /* Keep the header visible when scrolling */
+      background-color: #343a40;
+      color: white;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      font-weight: bold;
+    }
+
+    tbody tr:hover {
+      background-color: #f1f1f1;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    td[contenteditable="true"] {
+      background-color: #fffbe6;
+      cursor: pointer;
+    }
+
+    td[contenteditable="true"]:focus {
+      outline: 2px solid #007BFF;
+    }
+
+    .loading {
+      font-size: 18px;
+      color: #007BFF;
+      margin-top: 20px;
+    }
+
+    .error {
+      color: red;
+      font-size: 18px;
+      margin-top: 20px;
+    }
+
+    .checkbox-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      padding: 0;
+    }
+
+    .checkbox-list label {
+      margin: 0 5px;
+      display: flex;
+      align-items: center;
+    }
+
+    .column-container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      max-width: 1100px;
+      margin: auto;
+      text-align: center;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+
+    body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+        }
+
+        /* Sticky Navbar styles */
+        .navbar {
+
+          width: 100%;
+          position: fixed; /* Keeps the navbar at the top */
+          top: 0;
+          left: 0;
+          z-index: 10; /* Ensures it stays on top */
+          background-color: #343a40; /* Dark background */
+          color: white;
+          padding: 10px 20px;
+          display: flex;
+          justify-content: space-around; /* Space between menu items */
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Adds a subtle shadow */
+           
+        }
+        .navbar ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+        }
+        .navbar ul li {
+            margin: 0 15px;
+        }
+        .navbar ul li a {
+            text-decoration: none;
+            color: white;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+
+        .navbar ul li a.active {
+        border: 2px solid #ffd700; /* Box outline for active item */
+        background-color: #495057; /* Slightly darker background for active */
+        color: #ffd700; /* Highlighted text color */
+        border-radius: 4px; /* Smooth corners for the outline */
+    }
+        .navbar ul li a:hover {
+            color: #ffd700;
+        }
+
+        /* Main content styles */
+        main {
+          min-height: calc(100vh - 60px); /* Ensure content fills the page height */
+  padding-bottom: 60px; /* Space for the footer height */
+  box-sizing: border-box;
+        }
+
+        /* Footer styles */
+        .footer {
+          width: 100%;
+  background-color: #343a40; /* Dark background */
+  color: white;
+  text-align: center;
+  padding: 10px;
+  position: relative; /* Make it flow with content */
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+  margin-top: 20px; /* Add space between footer and main content */
+        }
+
+        
+
+
+        form {
+      max-width: 400px;
+      margin: auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    label {
+      display: block;
+      margin-bottom: 10px;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #007BFF;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+
+
+    .vessel-header {
+      text-align: center;
+      color: #343a40;
+    }
+
+    .vessel-form {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .vessel-group-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .vessel-group-container label {
+      flex: 1 1 calc(33% - 10px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .vessel-group-container input {
+      padding: 8px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+    }
+
+    .vessel-remove-btn {
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
+      cursor: pointer;
+      align-self: center;
+    }
+
+    .vessel-remove-btn:hover {
+      background: #c82333;
+    }
+
+    .vessel-btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 15px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .vessel-btn:hover {
+      background: #0056b3;
+    }
+
+    .vessel-add-btn {
+      margin-right: 10px;
+    }
+
+    .vessel-output-container {
+      margin-top: 20px;
+    }
+
+
+    .service-form {
+      max-width: 400px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .service-form label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+
+    .service-form input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 20px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+    }
+
+    .service-btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 15px;
+      cursor: pointer;
+      display: block;
+      width: 100%;
+    }
+
+    .service-btn:hover {
+      background: #0056b3;
+    }
+
+    .response-output {
+      margin-top: 20px;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+      background: #e9ecef;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      font-size: 14px;
+    }
+
+
+    .service-form {
+      max-width: 500px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .service-form label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+
+    .service-form input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 20px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+    }
+
+    .service-btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 15px;
+      cursor: pointer;
+      display: block;
+      width: 100%;
+    }
+
+    .service-btn:hover {
+      background: #0056b3;
+    }
+
+    .response-output {
+      margin-top: 20px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+      background: #e9ecef;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      font-size: 14px;
+    }
+
+    .content-wrapper {
+   /* Responsive width */
+  max-width: 1200px; /* Maximum width for large screens */
+  background-color: #ffffff; /* Clean background */
+  border-radius: 10px; /* Rounded corners */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+  margin: 80px auto 20px; /* Space from navbar and footer */
+  padding: 20px; /* Inner spacing */
+  box-sizing: border-box; /* Ensure padding doesn't affect width */
+  overflow: hidden; /* Prevent overflow issues */
+  
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  
+}
+
+
+.message-box {
+      background-color: #fff;
+      padding: 20px 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+    .message-box h2 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    .message-box p {
+      font-size: 16px;
+      margin-bottom: 30px;
+      color: #666;
+    }
+    .button-group {
+      display: flex;
+      justify-content: space-between;
+    }
+    .button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .button.confirm {
+      background-color: #ff6b6b;
+      color: white;
+    }
+    .button.confirm:hover {
+      background-color: #e55a5a;
+    }
+    .button.cancel {
+      background-color: #6c757d;
+      color: white;
+    }
+    .button.cancel:hover {
+      background-color: #5a636b;
+    }
+
+    .reset-msg-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+
+
+
+    .remove-vessel-container {
+            background-color: #ffffff;
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-size: 16px;
+            color: #555;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            color: #333;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        select:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+        }
+
+  
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+
+
+          
+
+    
+          <div class="navbar">
+            <ul>
+                <li><a href="{% url 'add-vessels' %}" class="{% if request.path == '/mlmodel/add-vessels/' %}active{% endif %}">Add Vessel</a></li>
+                <li><a href="{% url 'set-cce-rv' %}" class="{% if request.path == '/mlmodel/set-cce-rv/' %}active{% endif %}">Set CCE RV</a></li>
+                <li><a href="{% url 'set-bes-rv' %}" class="{% if request.path == '/mlmodel/set-bes-rv/' %}active{% endif %}">Set BES RV</a></li>
+                <li><a href="{% url 'generate-schedule' %}" class="{% if request.path == '/mlmodel/generate-schedule/' %}active{% endif %}">Generate Schedule</a></li>
+                <li><a href="{% url 'update-vessel-service' %}" class="{% if request.path == '/mlmodel/update-vessel-service/' %}active{% endif %}">Update Vessel</a></li>
+                <li><a href="{% url 'view-cce' %}" class="{% if request.path == '/mlmodel/view-cce/' %}active{% endif %}">Show CCE Schedule</a></li>
+                <li><a href="{% url 'view-bes' %}" class="{% if request.path == '/mlmodel/view-bes/' %}active{% endif %}">Show BES Schedule</a></li>
+                <li><a href="{% url 'remove-page' %}" class="{% if request.path == '/mlmodel/remove-vessel-page/' %}active{% endif %}">Remove Vessel</a></li>
+                <li><a href="{% url 'reset-page' %}" class="{% if request.path == '/mlmodel/reset-page/' %}active{% endif %}">Reset DB</a></li>
+            </ul>
+        </div>
+
+       
+
+    <!-- Main Content -->
+   <div class="content-wrapper">
+        {% block content %}
+        <div class="typewriter-container">
+          <div class="typewriter-text" id="typewriter"></div>
+      </div>
+      
+      <style>
+          .typewriter-container {
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              padding: 20px;
+              margin: 0 auto;
+              width: 100%; /* Full width of the screen */
+              max-width: 800px; /* Restrict maximum width for better readability */
+              box-sizing: border-box; /* Includes padding in width */
+              overflow-wrap: break-word; /* Break long words for wrapping */
+              word-wrap: break-word; /* Legacy compatibility */
+              word-break: break-word; /* Ensure long words break within bounds */
+              min-height: 100vh;
+          }
+      
+          .typewriter-text {
+              font-size: 32px; /* Large font size */
+              font-weight: bold; /* Bold text */
+              color: #090909; /* Text color */
+              border-right: 2px solid #fefefe; /* Cursor effect */
+              padding-right: 5px; /* Space for the cursor */
+              overflow: hidden; /* Hide overflow during typing */
+              display: inline-block;
+              text-align: center; /* Center the text inside the container */
+          }
+      </style>
+      
+      <script>
+          const text = "Welcome to the Vessel Scheduling App! Explore the features using the navigation above.";
+          const typingSpeed = 50; // Speed in milliseconds
+          const typewriterElement = document.getElementById('typewriter');
+      
+          let index = 0;
+      
+          function typeText() {
+              if (index < text.length) {
+                  typewriterElement.textContent += text.charAt(index);
+                  index++;
+                  setTimeout(typeText, typingSpeed);
+              } else {
+                  // Add a blinking cursor effect
+                  typewriterElement.style.borderRight = "2px solid transparent";
+                  setInterval(() => {
+                      typewriterElement.style.borderRight = typewriterElement.style.borderRight === "2px solid #007bff"
+                          ? "2px solid transparent"
+                          : "2px solid #007bff";
+                  }, 500);
+              }
+          }
+      
+          typeText();
+      </script>
+        {% endblock %}
+    </div>
+    
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>&copy; 2024 Vessel Scheduling App. All rights reserved.</p>
+    </div>
+</body>
+</html>

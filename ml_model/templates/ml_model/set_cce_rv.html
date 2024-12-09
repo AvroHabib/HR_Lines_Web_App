@@ -1,45 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Send JSON Data</title>
-  <style>
-    form {
-      max-width: 400px;
-      margin: auto;
-      padding: 20px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
-    label {
-      display: block;
-      margin-bottom: 10px;
-    }
-    input {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-      margin-bottom: 15px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    button {
-      width: 100%;
-      padding: 10px;
-      background-color: #007BFF;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-  </style>
-</head>
-<body>
+
+  {%extends 'ml_model/base.html'%}
+  {%block title%}Set CCE RV{%endblock%}
+  {%block content%}
   <h1 style="text-align: center;">CCE Service</h1>
 
   <form id="jsonForm">
@@ -71,20 +33,51 @@
   </form>
 
   <script>
+    
+    function saveInputs() {
+    const inputs = {
+      eta_to_etb_cgp: document.getElementById('eta_to_etb_cgp').value,
+      etb_to_etd_cgp: document.getElementById('etb_to_etd_cgp').value,
+      cgp_to_sin: document.getElementById('cgp_to_cmb').value,
+      eta_to_etb_sin: document.getElementById('eta_to_etb_cmb').value,
+      etb_to_etd_sin: document.getElementById('etb_to_etd_cmb').value,
+      sin_to_pkg: document.getElementById('cmb_to_cgp').value
+      
+    };
+    localStorage.setItem('formInputs-cce-rv', JSON.stringify(inputs));
+  }
+
+  // Load inputs from localStorage
+  function loadInputs() {
+    const savedInputs = JSON.parse(localStorage.getItem('formInputs-cce-rv'));
+    if (savedInputs) {
+      document.getElementById('eta_to_etb_cgp').value = savedInputs.eta_to_etb_cgp || '';
+      document.getElementById('etb_to_etd_cgp').value = savedInputs.etb_to_etd_cgp || '';
+      document.getElementById('cgp_to_cmb').value = savedInputs.cgp_to_sin || '';
+      document.getElementById('eta_to_etb_cmb').value = savedInputs.eta_to_etb_sin || '';
+      document.getElementById('etb_to_etd_cmb').value = savedInputs.etb_to_etd_sin || '';
+      document.getElementById('cmb_to_cgp').value = savedInputs.sin_to_pkg || '';
+      
+    }
+  }
+
+
     document.getElementById('sendButton').addEventListener('click', async () => {
       // Collect input values
       const data = {
-        eta_to_etb_cgp: parseFloat(document.getElementById('eta_to_etb_cgp').value),
-        etb_to_etd_cgp: parseFloat(document.getElementById('etb_to_etd_cgp').value),
-        cgp_to_cmb: parseFloat(document.getElementById('cgp_to_cmb').value),
-        eta_to_etb_cmb: parseFloat(document.getElementById('eta_to_etb_cmb').value),
-        etb_to_etd_cmb: parseFloat(document.getElementById('etb_to_etd_cmb').value),
-        cmb_to_cgp: parseFloat(document.getElementById('cmb_to_cgp').value)
+        eta_to_etb_cgp: parseInt(document.getElementById('eta_to_etb_cgp').value),
+        etb_to_etd_cgp: parseInt(document.getElementById('etb_to_etd_cgp').value),
+        cgp_to_cmb: parseInt(document.getElementById('cgp_to_cmb').value),
+        eta_to_etb_cmb: parseInt(document.getElementById('eta_to_etb_cmb').value),
+        etb_to_etd_cmb: parseInt(document.getElementById('etb_to_etd_cmb').value),
+        cmb_to_cgp: parseInt(document.getElementById('cmb_to_cgp').value)
       };
+
+      saveInputs();
 
       try {
         // Send JSON data to backend
-        const response = await fetch('http://127.0.0.1:8000/api/data', { // Replace with your backend URL
+        const response = await fetch('http://localhost:8000/mlmodel/set-cce-rv/', { // Replace with your backend URL
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -103,6 +96,9 @@
         alert('An error occurred while sending data.');
       }
     });
+
+    window.addEventListener('load', loadInputs);
   </script>
-</body>
-</html>
+  {%endblock%}
+  
+
